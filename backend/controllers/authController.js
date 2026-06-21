@@ -1,8 +1,9 @@
 import db from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Generate Token helper
 const generateToken = (user) => {
@@ -96,7 +97,7 @@ export const changePassword = async (req, res) => {
         // Generate new token since is_first_login is now false
         const [updatedRows] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
         const updatedUser = updatedRows[0];
-        
+
         const token = generateToken(updatedUser);
 
         res.cookie('token', token, {
@@ -106,7 +107,7 @@ export const changePassword = async (req, res) => {
             maxAge: 24 * 60 * 60 * 1000
         });
 
-        res.json({ 
+        res.json({
             message: "Password changed successfully.",
             user: {
                 id: updatedUser.id,
@@ -126,7 +127,7 @@ export const getMe = async (req, res) => {
     try {
         const userId = req.user.id;
         const [rows] = await db.query('SELECT id, name, email, role, is_first_login, total_leave_balance FROM users WHERE id = ?', [userId]);
-        
+
         if (rows.length === 0) {
             return res.status(404).json({ message: "User not found" });
         }

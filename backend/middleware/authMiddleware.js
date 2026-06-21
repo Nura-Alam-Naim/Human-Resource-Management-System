@@ -9,7 +9,7 @@ export const verifyToken = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded; // Contains id, email, role, etc.
         next();
     } catch (error) {

@@ -1,6 +1,7 @@
 import db from '../db.js';
 import bcrypt from 'bcrypt';
 
+
 // Manager: Get ALL Requests (Pending, Approved, Rejected)
 export const getAllRequests = async (req, res) => {
     try {
@@ -32,7 +33,7 @@ export const updateStatus = async (req, res) => {
 
         if (status === 'approved') {
             const [requestData] = await db.query(`SELECT user_id, DATEDIFF(end_date, start_date) + 1 AS days_taken FROM leave_requests WHERE id = ?`, [requestId]);
-            
+
             const userId = requestData[0].user_id;
             const daysTaken = requestData[0].days_taken;
 

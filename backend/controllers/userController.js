@@ -70,14 +70,15 @@ export const applyForLeave = async (req, res) => {
 export const editLeaveRequest = async (req, res) => {
     try {
         const requestId = req.params.request_id;
+        const userId = req.user.id;
         const { type_id, start_date, end_date, reason } = req.body;
 
-        // Ensure we only update if it is still 'pending'
-        const q = "UPDATE leave_requests SET type_id = ?, start_date = ?, end_date = ?, reason = ? WHERE id = ? AND status = 'pending'";
-        const [result] = await db.query(q, [type_id, start_date, end_date, reason, requestId]);
+        // Ensure we only update if it is still 'pending' AND belongs to the logged-in user
+        const q = "UPDATE leave_requests SET type_id = ?, start_date = ?, end_date = ?, reason = ? WHERE id = ? AND status = 'pending' AND user_id = ?";
+        const [result] = await db.query(q, [type_id, start_date, end_date, reason, requestId, userId]);
 
         if (result.affectedRows === 0) {
-            return res.status(400).json({ message: "Cannot edit. Request is either not pending or does not exist." });
+            return res.status(400).json({ message: "Cannot edit. Request is either not pending, does not exist, or does not belong to you." });
         }
 
         res.json({ message: "Leave request updated successfully!" });
@@ -91,13 +92,14 @@ export const editLeaveRequest = async (req, res) => {
 export const cancelLeaveRequest = async (req, res) => {
     try {
         const requestId = req.params.request_id;
+        const userId = req.user.id;
 
-        // Ensure we only cancel if it is still 'pending'
-        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND status = 'pending'";
-        const [result] = await db.query(q, [requestId]);
+        // Ensure we only cancel if it is still 'pending' AND belongs to the logged-in user
+        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND status = 'pending' AND user_id = ?";
+        const [result] = await db.query(q, [requestId, userId]);
 
         if (result.affectedRows === 0) {
-            return res.status(400).json({ message: "Cannot cancel. Request is either not pending or does not exist." });
+            return res.status(400).json({ message: "Cannot cancel. Request is either not pending, does not exist, or does not belong to you." });
         }
 
         res.json({ message: "Leave request cancelled successfully!" });
