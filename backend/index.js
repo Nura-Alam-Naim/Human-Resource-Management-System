@@ -18,6 +18,10 @@ validateEnv();
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+
+// Trust the proxy (Render/Heroku/etc load balancers) so secure cookies work!
+app.set('trust proxy', 1);
+
 const allowedOrigins = ['http://localhost:5173'];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);

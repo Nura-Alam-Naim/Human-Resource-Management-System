@@ -13,6 +13,9 @@ RUN npm install
 # Copy the rest of the backend code
 COPY . .
 
+# Set environment to production
+ENV NODE_ENV=production
+
 # Expose the port the app runs on
 EXPOSE 8800
 
