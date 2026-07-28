@@ -25,11 +25,42 @@ export const profile = async (req, res) => {
 export const getMyRequests = async (req, res) => {
     try {
         const userId = req.user.id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
 
-        const q = "SELECT lr.id, lr.start_date, lr.end_date, lr.reason, lr.status, lt.type_name, lr.type_id FROM leave_requests lr JOIN leave_types lt ON lr.type_id = lt.id WHERE lr.user_id = ? ORDER BY lr.start_date DESC";
-        const [rows] = await db.query(q, [userId]);
+        let whereClause = 'WHERE lr.user_id = ?';
+        const params = [userId];
+        
+        if (search) {
+            whereClause += ' AND (lr.reason LIKE ? OR lt.type_name LIKE ? OR lr.status LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
 
-        res.json(rows);
+        const countQuery = `
+            SELECT COUNT(*) as total FROM leave_requests lr
+            JOIN leave_types lt ON lr.type_id = lt.id
+            ${whereClause}
+        `;
+        const [[{ total }]] = await db.query(countQuery, params);
+
+        const q = `
+            SELECT lr.id, lr.start_date, lr.end_date, lr.reason, lr.status, lt.type_name, lr.type_id 
+            FROM leave_requests lr 
+            JOIN leave_types lt ON lr.type_id = lt.id 
+            ${whereClause} 
+            ORDER BY lr.start_date DESC
+            LIMIT ? OFFSET ?
+        `;
+        const [rows] = await db.query(q, [...params, limit, offset]);
+
+        res.json({
+            data: rows,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit)
+        });
     } catch (error) {
         console.error("error getting requests", error);
         res.status(500).json({ message: "Internal server error" });

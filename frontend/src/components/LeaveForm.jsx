@@ -51,7 +51,7 @@ const LeaveForm = ({ formData, onChange, onSubmit, submitLabel = 'Submit Request
         ></textarea>
       </div>
 
-      <button type="submit" className="btn btn-primary w-full" style={{ marginTop: '8px' }}>
+      <button type="submit" className="btn btn-primary w-full mt-2">
         {submitLabel}
       </button>
     </form>

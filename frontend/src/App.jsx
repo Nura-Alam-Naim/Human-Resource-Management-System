@@ -8,6 +8,9 @@ import ManagerDashboard from './pages/ManagerDashboard';
 import Login from './pages/Login';
 import SetPassword from './pages/SetPassword';
 import UserProfile from './pages/UserProfile';
+import AllEmployees from './pages/AllEmployees';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Toaster } from 'react-hot-toast';
 
 const MainContent = () => {
   const { user, loading } = useAuth();
@@ -15,7 +18,7 @@ const MainContent = () => {
   const [tempPassword, setTempPassword] = useState('');
 
   if (loading) {
-    return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-secondary)'}}>Loading...</div>;
+    return <div className="flex justify-center align-center h-screen text-secondary"><div className="spinner"></div></div>;
   }
 
   // Handle first time login flow
@@ -41,6 +44,9 @@ const MainContent = () => {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/profile" element={<UserProfile />} />
+      {user.role === 'manager' && (
+        <Route path="/employees" element={<AllEmployees />} />
+      )}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -48,16 +54,19 @@ const MainContent = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <div className="app-container">
-            <AppHeader />
-            <MainContent />
-          </div>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <div className="app-container">
+              <AppHeader />
+              <MainContent />
+              <Toaster position="top-right" />
+            </div>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

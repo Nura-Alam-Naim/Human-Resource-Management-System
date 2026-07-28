@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const CreateUserForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -17,41 +18,41 @@ const CreateUserForm = ({ onSuccess }) => {
     e.preventDefault();
     try {
       await axios.post('/api/admin/leaves/create-user', formData);
-      alert("User created successfully! Temporary password: Welcome@123");
+      toast.success("User created successfully! Temporary password: Welcome@123", { duration: 5000 });
       setFormData({ name: '', email: '', role: 'employee', total_leave_balance: 20 });
       if (onSuccess) onSuccess();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to create user');
+      toast.error(error.response?.data?.message || 'Failed to create user');
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="form-group" style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Full Name</label>
+      <div className="form-group">
+        <label>Full Name</label>
         <input
           type="text"
           required
-          style={{ width: '100%' }}
+          className="w-full"
           value={formData.name}
           onChange={(e) => handleChange('name', e.target.value)}
         />
       </div>
-      <div className="form-group" style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Email</label>
+      <div className="form-group">
+        <label>Email</label>
         <input
           type="email"
           required
-          style={{ width: '100%' }}
+          className="w-full"
           value={formData.email}
           onChange={(e) => handleChange('email', e.target.value)}
         />
       </div>
-      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+      <div className="form-row">
         <div className="form-group">
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Role</label>
+          <label>Role</label>
           <select
-            style={{ width: '100%' }}
+            className="w-full"
             value={formData.role}
             onChange={(e) => handleChange('role', e.target.value)}
           >
@@ -60,12 +61,12 @@ const CreateUserForm = ({ onSuccess }) => {
           </select>
         </div>
         <div className="form-group">
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem' }}>Leave Balance</label>
+          <label>Leave Balance</label>
           <input
             type="number"
             required
             min="0"
-            style={{ width: '100%' }}
+            className="w-full"
             value={formData.total_leave_balance}
             onChange={(e) => handleChange('total_leave_balance', parseInt(e.target.value))}
           />

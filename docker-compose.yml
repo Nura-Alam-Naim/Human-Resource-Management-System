@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. MySQL Database Service
+  db:
+    image: mysql:8.0
+    container_name: leave_portal_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-N@im2002}
+      MYSQL_DATABASE: ${DB_NAME:-leave_management_db}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # 2. Node.js Backend Service
+  backend:
+    build: ./backend
+    container_name: leave_portal_backend
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:-N@im2002}
+      - DB_NAME=${DB_NAME:-leave_management_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretkey123}
+      - PORT=8800
+    ports:
+      - "8800:8800"
+    depends_on:
+      - db
+
+  # 3. React Frontend Service (Nginx)
+  frontend:
+    build: ./frontend
+    container_name: leave_portal_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

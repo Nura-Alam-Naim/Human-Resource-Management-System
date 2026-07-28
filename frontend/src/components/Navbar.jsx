@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { User, Moon, Sun, LogOut, KeyRound } from 'lucide-react';
+import { User, Users, Moon, Sun, LogOut } from 'lucide-react';
 import './Navbar.scss';
 
 const Navbar = () => {
@@ -22,7 +22,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/" style={{display: 'flex', alignItems: 'center', gap: '8px', color: 'inherit'}}>
+        <Link to="/" className="brand-link">
           <h1>Leave Management</h1>
         </Link>
       </div>
@@ -33,12 +33,18 @@ const Navbar = () => {
           <span>{user.name} ({user.role})</span>
         </div>
         
-        <Link to="/profile" className="btn btn-outline btn-sm" style={{display: 'flex', alignItems: 'center'}}>
-          <User size={16} style={{marginRight: '6px'}} /> My Profile
+        <Link to="/profile" className="btn btn-outline btn-sm nav-link-btn">
+          <User size={16} /> My Profile
         </Link>
 
-        <button onClick={handleLogout} className="btn btn-primary btn-sm">
-          <LogOut size={16} style={{marginRight: '6px'}} /> Logout
+        {user.role === 'manager' && (
+          <Link to="/employees" className="btn btn-outline btn-sm nav-link-btn">
+            <Users size={16} /> All Employees
+          </Link>
+        )}
+
+        <button onClick={handleLogout} className="btn btn-primary btn-sm nav-link-btn">
+          <LogOut size={16} /> Logout
         </button>
 
         <button 

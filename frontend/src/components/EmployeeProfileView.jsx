@@ -51,15 +51,7 @@ const EmployeeProfileView = ({ data }) => {
                   </td>
                   <td>
                     <span
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--text-secondary)',
-                        display: 'block',
-                        maxWidth: '150px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
+                      className="truncate text-secondary text-sm"
                       title={req.reason}
                     >
                       {req.reason}

@@ -2,16 +2,23 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { Edit2, XCircle } from "lucide-react";
+import toast from "react-hot-toast";
 import Modal from "../components/Modal";
 import StatusBadge from "../components/StatusBadge";
 import LeaveForm from "../components/LeaveForm";
 import DateRange from "../components/DateRange";
+import Pagination from "../components/Pagination";
 import "./EmployeeDashboard.scss";
 
 const EmployeeDashboard = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const limit = 5;
 
   // Apply Form State
   const [formData, setFormData] = useState({
@@ -32,14 +39,18 @@ const EmployeeDashboard = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [profileRes, requestsRes] = await Promise.all([
         axios.get("/api/user/leaves/profile"),
-        axios.get("/api/user/leaves/my-requests"),
+        axios.get(`/api/user/leaves/my-requests?page=${page}&limit=${limit}&search=${searchTerm}`),
       ]);
       setProfile(profileRes.data);
-      setRequests(requestsRes.data);
+      setRequests(requestsRes.data.data);
+      setTotalPages(requestsRes.data.totalPages);
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,17 +58,17 @@ const EmployeeDashboard = () => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, page, searchTerm]);
 
   const handleApply = async (e) => {
     e.preventDefault();
     try {
       await axios.post("/api/user/leaves/apply", formData);
-      alert("Leave applied successfully!");
+      toast.success("Leave applied successfully!");
       setFormData({ type_id: 1, start_date: "", end_date: "", reason: "" });
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || "Error applying for leave");
+      toast.error(error.response?.data?.message || "Error applying for leave");
     }
   };
 
@@ -65,9 +76,10 @@ const EmployeeDashboard = () => {
     if (window.confirm("Are you sure you want to cancel this request?")) {
       try {
         await axios.put(`/api/user/leaves/cancel/${id}`);
+        toast.success("Leave request cancelled.");
         fetchData();
       } catch (error) {
-        alert("Error cancelling request");
+        toast.error("Error cancelling request");
       }
     }
   };
@@ -89,11 +101,11 @@ const EmployeeDashboard = () => {
         `/api/user/leaves/edit/${editingRequest.id}`,
         editFormData,
       );
-      alert("Leave request updated successfully!");
+      toast.success("Leave request updated successfully!");
       setEditingRequest(null);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || "Error editing request");
+      toast.error(error.response?.data?.message || "Error editing request");
     }
   };
 
@@ -124,7 +136,16 @@ const EmployeeDashboard = () => {
 
         {/* History Table */}
         <div className="card history-card">
-          <h3>My Leave History</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0 }}>My Leave History</h3>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+            />
+          </div>
           <div className="table-container">
             <table>
               <thead>
@@ -136,7 +157,13 @@ const EmployeeDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {requests.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="4" className="text-center">
+                      <div className="flex justify-center mt-2 mb-2"><div className="spinner spinner-sm"></div></div>
+                    </td>
+                  </tr>
+                ) : requests.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="text-center">
                       No leave requests found.
@@ -178,6 +205,7 @@ const EmployeeDashboard = () => {
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </div>
       <Modal

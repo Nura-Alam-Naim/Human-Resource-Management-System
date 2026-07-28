@@ -50,7 +50,7 @@ const UserProfile = () => {
   };
 
   if (loading) {
-    return <div className="loading-state">Loading profile...</div>;
+    return <div className="flex justify-center align-center h-screen"><div className="spinner"></div></div>;
   }
 
   if (!profile) {

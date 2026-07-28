@@ -8,10 +8,19 @@
   box-shadow: var(--shadow-sm);
 
   .navbar-brand {
-    h2 {
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: inherit;
+      text-decoration: none;
+
+      h1 {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        font-size: 1.25rem;
+      }
     }
   }
 
@@ -29,14 +38,14 @@
       font-weight: 500;
     }
 
-    .role-selector {
-      width: auto;
-      padding: 6px 12px;
-      font-size: 0.875rem;
-      border-radius: 6px;
-      background-color: var(--bg-color);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
+    .nav-link-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      
+      svg {
+        margin-right: 0; /* Remove old inline margin if present */
+      }
     }
 
     .theme-toggle-btn {
