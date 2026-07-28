@@ -145,12 +145,18 @@ npm test
 
 ## 🔐 Default Test Accounts
 
-The database automatically seeds with test users on the first run. All default passwords are `12345`.
+The database automatically seeds with test users on the first run.
 
-- **Manager:** `alice@company.com`
-- **Manager:** `charlie@company.com`
-- **Employee:** `bob@company.com`
-- **Employee:** `diana@company.com`
+| Email | Role | Password |
+|-------|------|----------|
+| alice@company.com | Manager | 12345 |
+| charlie@company.com | Manager | 12345 |
+| bob@company.com | Employee | 12345 |
+| diana@company.com | Employee | 12345 |
+| ethan@company.com | Employee | 12345 |
+| fiona@company.com | Employee | 12345 |
+| george@company.com | Employee | 12345 |
+| hannah@company.com | Employee | 12345 |
 
 ---
 
