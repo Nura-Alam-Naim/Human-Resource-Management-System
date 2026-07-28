@@ -96,14 +96,14 @@ const initializeDB = async () => {
     const defaultPassword = await bcrypt.hash('12345', 10);
     await db.query(`
       INSERT IGNORE INTO users (name, email, password, role, total_leave_balance, is_first_login) VALUES 
-      ('Alice Manager', 'alice@company.com', ?, 'manager', 20, FALSE),
-      ('Bob Employee', 'bob@company.com', ?, 'employee', 20, FALSE),
-      ('Charlie Admin', 'charlie@company.com', ?, 'manager', 20, FALSE),
-      ('Diana Smith', 'diana@company.com', ?, 'employee', 18, FALSE),
-      ('Ethan Brown', 'ethan@company.com', ?, 'employee', 15, FALSE),
-      ('Fiona Davis', 'fiona@company.com', ?, 'employee', 20, FALSE),
-      ('George Wilson', 'george@company.com', ?, 'employee', 12, FALSE),
-      ('Hannah Lee', 'hannah@company.com', ?, 'employee', 20, FALSE)
+      ('Alice Manager', 'alice@company.com', ?, 'manager', 20, TRUE),
+      ('Bob Employee', 'bob@company.com', ?, 'employee', 20, TRUE),
+      ('Charlie Admin', 'charlie@company.com', ?, 'manager', 20, TRUE),
+      ('Diana Smith', 'diana@company.com', ?, 'employee', 18, TRUE),
+      ('Ethan Brown', 'ethan@company.com', ?, 'employee', 15, TRUE),
+      ('Fiona Davis', 'fiona@company.com', ?, 'employee', 20, TRUE),
+      ('George Wilson', 'george@company.com', ?, 'employee', 12, TRUE),
+      ('Hannah Lee', 'hannah@company.com', ?, 'employee', 20, TRUE)
     `, [defaultPassword, defaultPassword, defaultPassword, defaultPassword, defaultPassword, defaultPassword, defaultPassword, defaultPassword]);
     await db.query(`
       INSERT IGNORE INTO leave_requests (id, user_id, type_id, start_date, end_date, reason, status) VALUES
