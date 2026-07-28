@@ -5,11 +5,18 @@ import bcrypt from 'bcrypt';
 dotenv.config();
 
 try {
-  const tempConnection = await mysql.createConnection({
+  const dbConfig = {
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-  });
+  };
+
+  if (process.env.DB_SSL === 'true') {
+    dbConfig.ssl = { rejectUnauthorized: false };
+  }
+
+  const tempConnection = await mysql.createConnection(dbConfig);
   await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
   console.log(`Database '${process.env.DB_NAME}' created/verified.`);
   await tempConnection.end();
@@ -18,12 +25,19 @@ try {
 }
 
 
-const db = mysql.createPool({
+const poolConfig = {
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-});
+};
+
+if (process.env.DB_SSL === 'true') {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const db = mysql.createPool(poolConfig);
 
 
 const initializeDB = async () => {
