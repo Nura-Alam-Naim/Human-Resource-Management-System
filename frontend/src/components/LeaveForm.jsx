@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LeaveForm = ({ formData, onChange, onSubmit, submitLabel = 'Submit Request' }) => {
+const LeaveForm = ({ formData, onChange, onSubmit, submitLabel = 'Submit Request', onFileChange, file }) => {
   const handleFieldChange = (field, value) => {
     onChange({ ...formData, [field]: value });
   };
@@ -50,6 +50,19 @@ const LeaveForm = ({ formData, onChange, onSubmit, submitLabel = 'Submit Request
           placeholder="Briefly explain your reason for leave..."
         ></textarea>
       </div>
+
+      {formData.type_id === 1 && onFileChange && (
+        <div className="form-group p-3 mt-2 bg-blue-50 border-blue-200" style={{ borderRadius: '8px', border: '1px dashed' }}>
+          <label className="text-blue-800 font-medium">Medical Certificate (Required for Sick Leave)</label>
+          <input 
+            type="file" 
+            accept=".pdf,.jpg,.jpeg,.png" 
+            required
+            onChange={onFileChange}
+            className="form-control mt-1"
+          />
+        </div>
+      )}
 
       <button type="submit" className="btn btn-primary w-full mt-2">
         {submitLabel}

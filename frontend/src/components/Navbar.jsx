@@ -1,13 +1,14 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { User, Users, Moon, Sun, LogOut } from 'lucide-react';
+import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare } from 'lucide-react';
 import './Navbar.scss';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
 
   if (!user) return null;
 
@@ -29,21 +30,60 @@ const Navbar = () => {
 
       <div className="navbar-controls">
         <div className="user-info">
-          <User size={18} />
-          <span>{user.name} ({user.role})</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span>{user.name}</span>
+            <span className="user-role">{user.role}</span>
+          </div>
         </div>
         
-        <Link to="/profile" className="btn btn-outline btn-sm nav-link-btn">
-          <User size={16} /> My Profile
-        </Link>
-
-        {user.role === 'manager' && (
-          <Link to="/employees" className="btn btn-outline btn-sm nav-link-btn">
-            <Users size={16} /> All Employees
+        <div className="nav-links">
+          <Link to="/profile" className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}>
+            <User size={16} /> Profile
           </Link>
-        )}
+          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+            <Briefcase size={16} /> {user.role === 'admin' ? 'Administration' : 'Dashboard'}
+          </Link>
 
-        <button onClick={handleLogout} className="btn btn-primary btn-sm nav-link-btn">
+          {/* Admin and Manager Links */}
+          {(user.role === 'manager' || user.role === 'admin') && (
+            <>
+              <Link to="/all-employees" className={`nav-link ${location.pathname === '/all-employees' ? 'active' : ''}`}>
+                <Users size={16} /> Employees
+              </Link>
+            </>
+          )}
+
+          {/* Admin Only Links */}
+          {user.role === 'admin' && (
+            <>
+              <Link to="/company-timesheets" className={`nav-link ${location.pathname === '/company-timesheets' ? 'active' : ''}`}>
+                <Clock size={16} /> Timesheets
+              </Link>
+              <Link to="/holidays" className={`nav-link ${location.pathname === '/holidays' ? 'active' : ''}`}>
+                <Calendar size={16} /> Holidays
+              </Link>
+              <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`}>
+                <Settings size={16} /> Settings
+              </Link>
+            </>
+          )}
+
+          {/* Personal Employee Links (For Managers and Employees, NOT Admins) */}
+          {user.role !== 'admin' && (
+            <>
+              <Link to="/my-timesheets" className={`nav-link ${location.pathname === '/my-timesheets' ? 'active' : ''}`}>
+                <Clock size={16} /> My Timesheets
+              </Link>
+            </>
+          )}
+
+          {/* Global Messaging (For Everyone) */}
+          <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`}>
+            <MessageSquare size={16} /> Messages
+          </Link>
+        </div>
+
+        <button onClick={handleLogout} className="btn btn-outline btn-sm logout-btn">
           <LogOut size={16} /> Logout
         </button>
 

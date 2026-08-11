@@ -8,16 +8,17 @@ import DateRange from '../components/DateRange';
 import PageHeader from '../components/PageHeader';
 import Pagination from '../components/Pagination';
 import ManagerAnalytics from '../components/ManagerAnalytics';
+import ActivityLog from '../components/ActivityLog';
+import CreateUserForm from '../components/CreateUserForm';
 import EmployeeProfileView from '../components/EmployeeProfileView';
-import ClockInWidget from '../components/ClockInWidget';
-import RequestMemberForm from '../components/RequestMemberForm';
+import MemberRequests from '../components/MemberRequests';
 import './ManagerDashboard.scss';
 
-const ManagerDashboard = () => {
+const AdminDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isRequestMemberModalOpen, setIsRequestMemberModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -27,7 +28,7 @@ const ManagerDashboard = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`/api/manager/leaves/all-requests?page=${page}&limit=${limit}&search=${searchTerm}`);
+      const res = await axios.get(`/api/admin/leaves/all-requests?page=${page}&limit=${limit}&search=${searchTerm}`);
       setRequests(res.data.data);
       setTotalPages(res.data.totalPages);
     } catch (error) {
@@ -44,7 +45,7 @@ const ManagerDashboard = () => {
   const handleUpdateStatus = async (id, status) => {
     if (window.confirm(`Are you sure you want to ${status} this request?`)) {
       try {
-        await axios.put(`/api/manager/leaves/update-status/${id}`, { status });
+        await axios.put(`/api/admin/leaves/update-status/${id}`, { status });
         toast.success(`Request ${status} successfully!`);
         fetchRequests();
       } catch (error) {
@@ -55,7 +56,7 @@ const ManagerDashboard = () => {
 
   const viewUserProfile = async (userId) => {
     try {
-      const res = await axios.get(`/api/manager/team/users/${userId}`);
+      const res = await axios.get(`/api/admin/leaves/users/${userId}`);
       setSelectedUser(res.data);
       setIsProfileModalOpen(true);
     } catch (error) {
@@ -66,17 +67,17 @@ const ManagerDashboard = () => {
   return (
     <div className="dashboard-container">
       <PageHeader
-        title="Department Dashboard"
-        subtitle="Review and manage your team's leave applications below."
+        title="Global Administration"
+        subtitle="Manage company-wide settings, leaves, and users."
         action={
-          <button className="btn btn-primary flex align-center gap-2" onClick={() => setIsRequestMemberModalOpen(true)}>
-            <UserPlus size={18} /> Request New Member
+          <button className="btn btn-primary flex align-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
+            <UserPlus size={18} /> Create User
           </button>
         }
       />
 
       <div className="mb-8">
-        <ClockInWidget />
+        <MemberRequests />
       </div>
 
       <ManagerAnalytics onStatClick={(term) => {
@@ -177,6 +178,8 @@ const ManagerDashboard = () => {
         <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
+      <ActivityLog />
+
       <Modal
         isOpen={isProfileModalOpen && !!selectedUser}
         onClose={() => { setIsProfileModalOpen(false); setSelectedUser(null); }}
@@ -187,14 +190,14 @@ const ManagerDashboard = () => {
       </Modal>
 
       <Modal
-        isOpen={isRequestMemberModalOpen}
-        onClose={() => setIsRequestMemberModalOpen(false)}
-        title="Request New Team Member"
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create New User"
       >
-        <RequestMemberForm onSuccess={() => setIsRequestMemberModalOpen(false)} />
+        <CreateUserForm onSuccess={() => setIsCreateModalOpen(false)} />
       </Modal>
     </div>
   );
 };
 
-export default ManagerDashboard;
+export default AdminDashboard;

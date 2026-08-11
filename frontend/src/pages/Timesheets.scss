@@ -1,0 +1,28 @@
+.table-container {
+  overflow-x: auto;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      font-weight: 600;
+      color: #64748b;
+      background: #f8fafc;
+    }
+
+    tbody tr {
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: #f1f5f9;
+      }
+    }
+  }
+}

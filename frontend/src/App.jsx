@@ -5,10 +5,17 @@ import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import SetPassword from './pages/SetPassword';
 import UserProfile from './pages/UserProfile';
 import AllEmployees from './pages/AllEmployees';
+import OrgChart from './pages/OrgChart';
+import AdminSettings from './pages/AdminSettings';
+import Timesheets from './pages/Timesheets';
+import CompanyTimesheets from './pages/CompanyTimesheets';
+import PublicHolidays from './pages/PublicHolidays';
+import Messages from './pages/Messages';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -38,15 +45,23 @@ const MainContent = () => {
     />;
   }
 
-  const Dashboard = user.role === 'manager' ? ManagerDashboard : EmployeeDashboard;
+  const Dashboard = user.role === 'admin' ? AdminDashboard : (user.role === 'manager' ? ManagerDashboard : EmployeeDashboard);
 
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/profile" element={<UserProfile />} />
       {user.role === 'manager' && (
-        <Route path="/employees" element={<AllEmployees />} />
+        <>
+          <Route path="/all-employees" element={user && (user.role === 'manager' || user.role === 'admin') ? <AllEmployees /> : <Navigate to="/dashboard" />} />
+          <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/company-timesheets" element={<CompanyTimesheets />} />
+          <Route path="/holidays" element={<PublicHolidays />} />
+        </>
       )}
+      <Route path="/my-timesheets" element={user ? <Timesheets /> : <Navigate to="/login" />} />
+      <Route path="/org-chart" element={user ? <OrgChart /> : <Navigate to="/login" />} />
+      <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

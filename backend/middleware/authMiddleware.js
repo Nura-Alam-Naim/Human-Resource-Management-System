@@ -17,10 +17,18 @@ export const verifyToken = (req, res, next) => {
     }
 };
 
-export const verifyAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'manager') {
+export const verifyManagerOrAdmin = (req, res, next) => {
+    if (req.user && (req.user.role === 'manager' || req.user.role === 'admin')) {
         next();
     } else {
-        return res.status(403).json({ message: "Access Denied. Manager privileges required." });
+        return res.status(403).json({ message: "Access Denied. Manager or Admin privileges required." });
+    }
+};
+
+export const verifyAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ message: "Access Denied. Admin privileges required." });
     }
 };

@@ -1,14 +1,7 @@
 import express from 'express';
-import {
-    profile,
-    getMyRequests,
-    applyForLeave,
-    editLeaveRequest,
-    cancelLeaveRequest,
-} from '../controllers/userController.js';
-
-import { verifyToken } from '../middleware/authMiddleware.js';
-import { applyLeaveRules, editLeaveRules, cancelLeaveRules, validate } from '../middleware/validators.js';
+import { profile, getMyRequests, applyForLeave, editLeaveRequest, cancelLeaveRequest } from '../../controllers/employee/leavesController.js';
+import { verifyToken } from '../../middleware/authMiddleware.js';
+import { applyLeaveRules, editLeaveRules, cancelLeaveRules, validate } from '../../middleware/validators.js';
 
 const router = express.Router();
 

@@ -1,4 +1,5 @@
-import db from '../db.js';
+import db from '../../db.js';
+import { calculateWorkingDays } from '../../utils/leaveUtils.js';
 
 
 export const profile = async (req, res) => {
@@ -75,14 +76,14 @@ export const applyForLeave = async (req, res) => {
         // Fix: Added missing 'await'
         const [remainingDays] = await db.query("SELECT total_leave_balance FROM users WHERE id = ?", [userId]);
 
-        // Fix: DATEDIFF is an SQL function, not a JavaScript function. 
-        // We must calculate the days manually in JS using the Date object:
-        const start = new Date(start_date);
-        const end = new Date(end_date);
-        const days_taken = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const days_taken = await calculateWorkingDays(start_date, end_date);
+
+        if (days_taken === 0) {
+            return res.status(400).json({ message: "Selected dates result in 0 working days (weekends/holidays)." });
+        }
 
         if (remainingDays[0].total_leave_balance < days_taken) {
-            return res.status(400).json({ message: "Insufficient leave balance" });
+            return res.status(400).json({ message: "Insufficient leave balance. You are requesting " + days_taken + " working days." });
         }
 
         const q = "INSERT INTO leave_requests (user_id, type_id, start_date, end_date, reason, status) VALUES (?, ?, ?, ?, ?, 'pending')";
@@ -104,7 +105,7 @@ export const editLeaveRequest = async (req, res) => {
         const userId = req.user.id;
         const { type_id, start_date, end_date, reason } = req.body;
 
-        // Ensure we only update if it is still 'pending' AND belongs to the logged-in user
+        // Ensure we only update if it is still pending AND belongs to the logged-in user
         const q = "UPDATE leave_requests SET type_id = ?, start_date = ?, end_date = ?, reason = ? WHERE id = ? AND status = 'pending' AND user_id = ?";
         const [result] = await db.query(q, [type_id, start_date, end_date, reason, requestId, userId]);
 
@@ -125,7 +126,7 @@ export const cancelLeaveRequest = async (req, res) => {
         const requestId = req.params.request_id;
         const userId = req.user.id;
 
-        // Ensure we only cancel if it is still 'pending' AND belongs to the logged-in user
+        // Ensure we only cancel if it is still pending AND belongs to the logged-in user
         const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND status = 'pending' AND user_id = ?";
         const [result] = await db.query(q, [requestId, userId]);
 

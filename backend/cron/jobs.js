@@ -10,11 +10,11 @@ export const startCronJobs = () => {
         try {
             console.log("Server is Refeshed");
 
-            // If the end_date is strictly less than today, and status is still 'pending', reject it.
+            // If the end_date is strictly less than today, and status is still pending, reject it.
             const q = `
                 UPDATE leave_requests 
                 SET status = 'rejected' 
-                WHERE status = 'pending' AND end_date < CURDATE()
+                WHERE status IN ('pending_manager', 'pending_hr', 'pending') AND end_date < CURDATE()
             `;
 
             const [result] = await db.query(q);
@@ -47,6 +47,24 @@ export const startCronJobs = () => {
             console.log("✅ All leave balances have been reset to 20 days.");
         } catch (error) {
             console.error("❌ Error running yearly reset cron job:", error);
+        }
+    });
+
+    // 3. Monthly Accrual Engine
+    // Runs on the 1st of every month at 12:00 AM
+    // Cron string: '0 0 1 * *'
+    cron.schedule('0 0 1 * *', async () => {
+        try {
+            console.log("📈 Running Monthly Accrual Engine...");
+            // Add 1.5 days to everyone's balance
+            const q = `
+                UPDATE users 
+                SET total_leave_balance = total_leave_balance + 1.5
+            `;
+            await db.query(q);
+            console.log("✅ Accrued 1.5 days of leave for all employees.");
+        } catch (error) {
+            console.error("❌ Error running accrual cron job:", error);
         }
     });
 

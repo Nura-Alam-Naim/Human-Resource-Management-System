@@ -11,6 +11,12 @@
   gap: 24px;
 }
 
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
 .stat-card {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);

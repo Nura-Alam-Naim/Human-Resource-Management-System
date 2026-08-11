@@ -8,6 +8,7 @@ import StatusBadge from "../components/StatusBadge";
 import LeaveForm from "../components/LeaveForm";
 import DateRange from "../components/DateRange";
 import Pagination from "../components/Pagination";
+import ClockInWidget from "../components/ClockInWidget";
 import "./EmployeeDashboard.scss";
 
 const EmployeeDashboard = () => {
@@ -20,13 +21,13 @@ const EmployeeDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const limit = 5;
 
-  // Apply Form State
   const [formData, setFormData] = useState({
     type_id: 1,
     start_date: "",
     end_date: "",
     reason: "",
   });
+  const [documentFile, setDocumentFile] = useState(null);
 
   // Edit Form State
   const [editingRequest, setEditingRequest] = useState(null);
@@ -62,10 +63,29 @@ const EmployeeDashboard = () => {
 
   const handleApply = async (e) => {
     e.preventDefault();
+    if (formData.type_id === 1 && !documentFile) {
+        toast.error("Please upload a medical certificate for sick leave.");
+        return;
+    }
+    
     try {
-      await axios.post("/api/user/leaves/apply", formData);
+      const res = await axios.post("/api/user/leaves/apply", formData);
+      const requestId = res.data.id;
+      
+      if (documentFile) {
+          const uploadData = new FormData();
+          uploadData.append("document", documentFile);
+          uploadData.append("request_id", requestId);
+          uploadData.append("doc_type", "Medical Certificate");
+          
+          await axios.post("/api/documents/upload", uploadData, {
+              headers: { "Content-Type": "multipart/form-data" }
+          });
+      }
+      
       toast.success("Leave applied successfully!");
       setFormData({ type_id: 1, start_date: "", end_date: "", reason: "" });
+      setDocumentFile(null);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Error applying for leave");
@@ -123,6 +143,11 @@ const EmployeeDashboard = () => {
       </div>
 
       <div className="dashboard-grid">
+        {/* Clock In Widget */}
+        <div className="clock-in-section">
+          <ClockInWidget />
+        </div>
+
         {/* Apply Form */}
         <div className="card apply-card">
           <h3>Apply for Leave</h3>
@@ -131,6 +156,8 @@ const EmployeeDashboard = () => {
             onChange={setFormData}
             onSubmit={handleApply}
             submitLabel="Submit Request"
+            onFileChange={(e) => setDocumentFile(e.target.files[0])}
+            file={documentFile}
           />
         </div>
 
