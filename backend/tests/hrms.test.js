@@ -9,7 +9,7 @@ beforeAll(async () => {
   const response = await request(app)
     .post('/api/auth/login')
     .send({
-      email: 'alice@company.com',
+      email: 'charlie@company.com',
       password: '12345'
     });
   

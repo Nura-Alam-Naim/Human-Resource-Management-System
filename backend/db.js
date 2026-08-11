@@ -99,7 +99,7 @@ const initializeDB = async () => {
       INSERT IGNORE INTO users (name, email, password, role, total_leave_balance, is_first_login) VALUES 
       ('Alice Manager', 'alice@company.com', ?, 'manager', 20, TRUE),
       ('Bob Employee', 'bob@company.com', ?, 'employee', 20, TRUE),
-      ('Charlie Admin', 'charlie@company.com', ?, 'manager', 20, TRUE),
+      ('Charlie Admin', 'charlie@company.com', ?, 'admin', 20, TRUE),
       ('Diana Smith', 'diana@company.com', ?, 'employee', 18, TRUE),
       ('Ethan Brown', 'ethan@company.com', ?, 'employee', 15, TRUE),
       ('Fiona Davis', 'fiona@company.com', ?, 'employee', 20, TRUE),
