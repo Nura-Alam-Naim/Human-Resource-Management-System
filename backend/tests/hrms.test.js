@@ -34,11 +34,12 @@ describe('HRMS Phase 1 API Tests (Departments & Designations)', () => {
   });
 
   it('should create a new department', async () => {
+    const deptName = `Marketing Test ${Date.now()}`;
     const res = await request(app)
       .post('/api/departments')
       .set('Cookie', authCookie)
       .send({
-        name: 'Marketing Test',
+        name: deptName,
         manager_id: 1 // Alice
       });
     
