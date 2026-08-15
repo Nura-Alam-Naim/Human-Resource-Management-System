@@ -56,6 +56,11 @@ const initializeDB = async () => {
     `);
     console.log("Users table is ready.");
     
+    // Ensure the ENUM has 'admin' in case the table was created before the admin role was introduced
+    try {
+      await db.query("ALTER TABLE users MODIFY COLUMN role ENUM('employee', 'manager', 'admin') DEFAULT 'employee'");
+    } catch(e) { /* Ignore if it fails */ }
+    
     await db.query(`
       CREATE TABLE IF NOT EXISTS leave_types (
         id INT AUTO_INCREMENT PRIMARY KEY,
