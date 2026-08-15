@@ -29,6 +29,7 @@ export const getTeamAnalytics = async (req, res) => {
             JOIN leave_types lt ON lr.type_id = lt.id
             JOIN users u ON lr.user_id = u.id
             WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)
+              AND CURDATE() BETWEEN lr.start_date AND lr.end_date
             GROUP BY lt.id
         `, params);
 
@@ -37,6 +38,7 @@ export const getTeamAnalytics = async (req, res) => {
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id
             WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)
+              AND CURDATE() BETWEEN lr.start_date AND lr.end_date
             GROUP BY lr.status
         `, params);
 
@@ -139,9 +141,21 @@ export const getTeamUserProfile = async (req, res) => {
         `;
         const [historyRows] = await db.query(historyQuery, [userId]);
 
+        const worktimeQuery = `
+            SELECT DATE_FORMAT(date, '%a') as day, ROUND(AVG(TIMESTAMPDIFF(MINUTE, clock_in, clock_out) / 60), 1) as avg_hours
+            FROM attendance
+            WHERE user_id = ? 
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
+              AND clock_out IS NOT NULL
+            GROUP BY date
+            ORDER BY date ASC
+        `;
+        const [worktimeRows] = await db.query(worktimeQuery, [userId]);
+
         res.json({
             user: rows[0],
-            history: historyRows
+            history: historyRows,
+            worktime_stats: worktimeRows
         });
     } catch (error) {
         console.error("Error fetching user profile", error);
@@ -223,6 +237,34 @@ export const updateTeamUserDesignation = async (req, res) => {
         res.json({ message: "Designation updated successfully" });
     } catch (error) {
         console.error("Error updating user designation", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const createTransferRequest = async (req, res) => {
+    try {
+        const { employee_id } = req.body;
+        const managerId = req.user.id;
+
+        const [[managerDept]] = await db.query(`SELECT department_id FROM users WHERE id = ?`, [managerId]);
+        if (!managerDept || !managerDept.department_id) {
+            return res.status(400).json({ message: "You are not assigned to a department." });
+        }
+
+        const targetDepartmentId = managerDept.department_id;
+
+        // Ensure the employee is not already in the target department
+        const [[emp]] = await db.query(`SELECT department_id FROM users WHERE id = ?`, [employee_id]);
+        if (emp && emp.department_id === targetDepartmentId) {
+            return res.status(400).json({ message: "Employee is already in your department." });
+        }
+
+        const q = "INSERT INTO transfer_requests (employee_id, target_department_id, requested_by) VALUES (?, ?, ?)";
+        await db.query(q, [employee_id, targetDepartmentId, managerId]);
+
+        res.status(201).json({ message: "Transfer request submitted to Admin." });
+    } catch (error) {
+        console.error("Error creating transfer request", error);
         res.status(500).json({ message: "Server error" });
     }
 };

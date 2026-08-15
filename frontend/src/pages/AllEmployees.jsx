@@ -78,6 +78,27 @@ const AllEmployees = () => {
     }
   };
 
+  const handlePromoteRole = async (userId, newRole) => {
+    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+    try {
+      await axios.put(`/api/admin/leaves/users/${userId}/role`, { role: newRole });
+      toast.success(`User successfully promoted to ${newRole}!`);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to promote user");
+    }
+  };
+
+  const handleRequestTransfer = async (employeeId) => {
+    if (!window.confirm(`Request this employee to be transferred to your department?`)) return;
+    try {
+      await axios.post(`/api/manager/team/transfer-request`, { employee_id: employeeId });
+      toast.success('Transfer request sent to Admin!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to request transfer");
+    }
+  };
+
   const viewUserProfile = async (userId) => {
     try {
       const endpoint = loggedInUser.role === 'manager' ? `/api/manager/team/users/${userId}` : `/api/admin/leaves/users/${userId}`;
@@ -113,121 +134,77 @@ const AllEmployees = () => {
         />
       </div>
 
-      <div className="card">
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Leave Balance</th>
-                <th>Leaves Taken</th>
-                <th>Avg Daily Hours</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="text-center">
-                    <div className="flex justify-center mt-2 mb-2"><div className="spinner spinner-sm"></div></div>
-                  </td>
-                </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center">No employees found.</td>
-                </tr>
-              ) : (
-                users.map(user => (
-                  <tr key={user.id}>
-                    <td>
-                      <div
-                        className="employee-cell cursor-pointer"
-                        onClick={() => viewUserProfile(user.id)}
-                        title="Click to view full profile"
-                      >
-                        <div className="avatar">
-                          <UserIcon size={16} />
-                        </div>
-                        <span className="font-medium employee-name">{user.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="email-cell">
-                        <Mail size={14} className="icon" />
-                        <span>{user.email}</span>
-                      </div>
-                    </td>
-                    <td>
-                      {editingUserId === user.id ? (
-                        <div className="flex gap-2 align-center">
-                          <select 
-                            className="form-control form-control-sm"
-                            value={editDesignationId}
-                            onChange={(e) => setEditDesignationId(e.target.value)}
-                          >
-                            <option value="">-- Select Role --</option>
-                            {designations.map(d => (
-                              <option key={d.id} value={d.id}>{d.title}</option>
-                            ))}
-                          </select>
-                          <button 
-                            className="btn btn-success btn-sm p-1" 
-                            onClick={() => handleSaveRole(user.id, editDesignationId)}
-                          >
-                            <Save size={14} />
-                          </button>
-                          <button 
-                            className="btn btn-outline btn-sm p-1" 
-                            onClick={() => setEditingUserId(null)}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-800">{user.designation_title || user.role}</span>
-                          {(loggedInUser.role === 'manager' || loggedInUser.role === 'admin') && (
-                            <button 
-                              className="text-gray-400 hover:text-indigo-600 transition-colors"
-                              title="Change Working Role"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditDesignationId(user.designation_id || '');
-                                setEditingUserId(user.id);
-                              }}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span className="balance-cell">{user.total_leave_balance} days</span>
-                    </td>
-                    <td>
-                      <span className="taken-cell">{user.total_leaves_taken} days</span>
-                    </td>
-                    <td>
-                      <span className="font-mono">{user.avg_daily_hours || 0}h</span>
-                    </td>
-                    <td>
-                      {(user.avg_daily_hours || 0) >= 8 ? (
-                        <span className="badge badge-success">Meeting Req</span>
-                      ) : (
-                        <span className="badge badge-danger">Action Req</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="flex justify-center mt-8 mb-8"><div className="spinner"></div></div>
+      ) : (
+        <div className="tables-wrapper flex flex-col gap-8">
+          
+          {loggedInUser.role === 'admin' && (
+            <div className="card">
+              <div className="card-header p-4 border-b">
+                <h3 className="m-0 text-lg font-semibold text-gray-800">System Administrators</h3>
+              </div>
+              <div className="table-container">
+                <UserTable 
+                  users={users.filter(u => u.role === 'admin')} 
+                  loggedInUser={loggedInUser}
+                  viewUserProfile={viewUserProfile}
+                  editingUserId={editingUserId}
+                  setEditingUserId={setEditingUserId}
+                  editDesignationId={editDesignationId}
+                  setEditDesignationId={setEditDesignationId}
+                  designations={designations}
+                  handleSaveRole={handleSaveRole}
+                  handlePromoteRole={handlePromoteRole}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="card">
+            <div className="card-header p-4 border-b">
+              <h3 className="m-0 text-lg font-semibold text-gray-800">Managers</h3>
+            </div>
+            <div className="table-container">
+              <UserTable 
+                users={users.filter(u => u.role === 'manager')} 
+                loggedInUser={loggedInUser}
+                viewUserProfile={viewUserProfile}
+                editingUserId={editingUserId}
+                setEditingUserId={setEditingUserId}
+                editDesignationId={editDesignationId}
+                setEditDesignationId={setEditDesignationId}
+                designations={designations}
+                handleSaveRole={handleSaveRole}
+                handlePromoteRole={handlePromoteRole}
+              />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header p-4 border-b">
+              <h3 className="m-0 text-lg font-semibold text-gray-800">Employees</h3>
+            </div>
+            <div className="table-container">
+              <UserTable 
+                users={users.filter(u => u.role === 'employee')} 
+                loggedInUser={loggedInUser}
+                viewUserProfile={viewUserProfile}
+                editingUserId={editingUserId}
+                setEditingUserId={setEditingUserId}
+                editDesignationId={editDesignationId}
+                setEditDesignationId={setEditDesignationId}
+                designations={designations}
+                handleSaveRole={handleSaveRole}
+                handlePromoteRole={handlePromoteRole}
+                handleRequestTransfer={handleRequestTransfer}
+              />
+            </div>
+          </div>
+
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-      </div>
+      )}
 
       <Modal
         isOpen={isProfileModalOpen && !!selectedUser}
@@ -238,6 +215,141 @@ const AllEmployees = () => {
         <EmployeeProfileView data={selectedUser} onUpdate={() => { viewUserProfile(selectedUser.user.id); fetchUsers(); }} />
       </Modal>
     </div>
+  );
+};
+
+const UserTable = ({ users, loggedInUser, viewUserProfile, editingUserId, setEditingUserId, editDesignationId, setEditDesignationId, designations, handleSaveRole, handlePromoteRole, handleRequestTransfer }) => {
+  if (users.length === 0) {
+    return <div className="text-center p-4 text-gray-500">No users found in this category.</div>;
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Role</th>
+          <th>Leave Balance</th>
+          <th>Leaves Taken</th>
+          <th>Avg Daily Hours</th>
+          <th>Status</th>
+          {(loggedInUser.role === 'admin' || loggedInUser.role === 'manager') && <th>System Access</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {users.map(user => (
+          <tr key={user.id}>
+            <td>
+              <div
+                className="employee-cell cursor-pointer"
+                onClick={() => viewUserProfile(user.id)}
+                title="Click to view full profile"
+              >
+                <div className="avatar">
+                  <UserIcon size={16} />
+                </div>
+                <span className="font-medium employee-name">{user.name}</span>
+              </div>
+            </td>
+            <td>
+              <div className="email-cell">
+                <Mail size={14} className="icon" />
+                <span>{user.email}</span>
+              </div>
+            </td>
+            <td>
+              <span className="text-gray-600 text-sm font-medium">{user.department_name || 'N/A'}</span>
+            </td>
+            <td>
+              {editingUserId === user.id ? (
+                <div className="flex gap-2 align-center">
+                  <select 
+                    className="flex-1 p-2 border rounded"
+                    style={{ minWidth: '150px', backgroundColor: 'var(--input-bg)', color: 'var(--input-text)' }}
+                    value={editDesignationId}
+                    onChange={(e) => setEditDesignationId(e.target.value)}
+                  >
+                    <option value="">-- Select Role --</option>
+                    {designations.map(d => (
+                      <option key={d.id} value={d.id}>{d.title}</option>
+                    ))}
+                  </select>
+                  <button 
+                    className="btn btn-success btn-sm p-1" 
+                    onClick={() => handleSaveRole(user.id, editDesignationId)}
+                  >
+                    <Save size={14} />
+                  </button>
+                  <button 
+                    className="btn btn-outline btn-sm p-1" 
+                    onClick={() => setEditingUserId(null)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-800">{user.designation_title || user.role}</span>
+                  {(loggedInUser.role === 'manager' || loggedInUser.role === 'admin') && (
+                    <button 
+                      className="text-gray-400 hover:text-indigo-600 transition-colors"
+                      title="Change Working Role"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditDesignationId(user.designation_id || '');
+                        setEditingUserId(user.id);
+                      }}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </td>
+            <td>
+              <span className="balance-cell">{user.total_leave_balance} days</span>
+            </td>
+            <td>
+              <span className="taken-cell">{user.total_leaves_taken} days</span>
+            </td>
+            <td>
+              <span className="font-mono">{user.avg_daily_hours || 0}h</span>
+            </td>
+            <td>
+              {(user.avg_daily_hours || 0) >= 8 ? (
+                <span className="badge badge-success">Meeting Req</span>
+              ) : (
+                <span className="badge badge-danger">Action Req</span>
+              )}
+            </td>
+            {loggedInUser.role === 'admin' && (
+              <td>
+                <div className="flex gap-2">
+                  {user.role !== 'admin' && (
+                    <button className="btn btn-outline btn-sm text-xs py-1 px-2" onClick={() => handlePromoteRole(user.id, 'admin')}>Promote Admin</button>
+                  )}
+                  {user.role !== 'manager' && user.role !== 'admin' && (
+                    <button className="btn btn-outline btn-sm text-xs py-1 px-2" onClick={() => handlePromoteRole(user.id, 'manager')}>Promote Manager</button>
+                  )}
+                  {user.role !== 'employee' && user.id !== loggedInUser.id && (
+                    <button className="btn btn-outline btn-sm text-xs py-1 px-2" onClick={() => handlePromoteRole(user.id, 'employee')}>Demote</button>
+                  )}
+                </div>
+              </td>
+            )}
+            {loggedInUser.role === 'manager' && (
+              <td>
+                {user.role === 'employee' && (
+                  <button className="btn btn-primary btn-sm text-xs py-1 px-2" onClick={() => handleRequestTransfer(user.id)}>Request Transfer</button>
+                )}
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 };
 

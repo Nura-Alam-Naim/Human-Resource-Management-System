@@ -12,7 +12,7 @@
 }
 
 .org-department {
-  background: white;
+  background: var(--surface-color);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   padding: 1.5rem;
@@ -83,7 +83,7 @@
       align-items: center;
       gap: 1rem;
       padding: 0.75rem;
-      background: white;
+      background: var(--surface-color);
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       transition: transform 0.2s;

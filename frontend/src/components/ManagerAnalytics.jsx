@@ -26,6 +26,12 @@ const ManagerAnalytics = ({ onStatClick }) => {
       try {
         const endpoint = user.role === 'manager' ? '/api/manager/team/analytics' : '/api/admin/leaves/analytics';
         const res = await axios.get(endpoint);
+        if (res.data.worktime_stats) {
+          res.data.worktime_stats = res.data.worktime_stats.map(s => ({
+            ...s,
+            avg_hours: parseFloat(s.avg_hours)
+          }));
+        }
         setData(res.data);
       } catch (error) {
         console.error('Error fetching analytics:', error);

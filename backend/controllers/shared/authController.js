@@ -51,7 +51,8 @@ export const login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                is_first_login: user.is_first_login
+                is_first_login: user.is_first_login,
+                profile_picture: user.profile_picture
             }
         });
     } catch (error) {
@@ -114,7 +115,8 @@ export const changePassword = async (req, res) => {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 role: updatedUser.role,
-                is_first_login: updatedUser.is_first_login
+                is_first_login: updatedUser.is_first_login,
+                profile_picture: updatedUser.profile_picture
             }
         });
     } catch (error) {
@@ -126,7 +128,7 @@ export const changePassword = async (req, res) => {
 export const getMe = async (req, res) => {
     try {
         const userId = req.user.id;
-        const [rows] = await db.query('SELECT id, name, email, role, is_first_login, total_leave_balance FROM users WHERE id = ?', [userId]);
+        const [rows] = await db.query('SELECT id, name, email, role, is_first_login, total_leave_balance, profile_picture FROM users WHERE id = ?', [userId]);
 
         if (rows.length === 0) {
             return res.status(404).json({ message: "User not found" });

@@ -6,7 +6,10 @@ import { Settings, Plus, Building, Briefcase, User as UserIcon } from 'lucide-re
 import toast from 'react-hot-toast';
 import './AdminSettings.scss';
 
+import { useNavigate } from 'react-router-dom';
+
 const AdminSettings = () => {
+  const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +98,16 @@ const AdminSettings = () => {
           </div>
         ) : (
           departments.map(dept => (
-            <div key={dept.id} className="card dept-card">
+            <div 
+              key={dept.id} 
+              className="card dept-card cursor-pointer hover:shadow-lg transition-shadow relative"
+              onClick={() => navigate(`/department/${dept.id}`)}
+            >
+              {dept.pending_transfers > 0 && (
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+                  {dept.pending_transfers}
+                </div>
+              )}
               <div className="dept-card-header">
                 <div className="flex items-center gap-2">
                   <Building className="text-indigo-600" size={24} />
@@ -107,12 +119,16 @@ const AdminSettings = () => {
                 </div>
               </div>
               
-              <div className="dept-card-actions mt-4 border-t pt-4">
+              <div className="dept-card-actions mt-4 border-t pt-4 flex justify-between items-center">
+                <span className="text-sm text-gray-500">View full details &rarr;</span>
                 <button 
-                  className="btn btn-outline btn-sm" 
-                  onClick={() => openDesigModal(dept.id)}
+                  className="btn btn-outline btn-sm z-10" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDesigModal(dept.id);
+                  }}
                 >
-                  <Plus size={14} /> Add Job Designation
+                  <Plus size={14} /> Add Role
                 </button>
               </div>
             </div>

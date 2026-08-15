@@ -9,6 +9,7 @@ import LeaveForm from "../components/LeaveForm";
 import DateRange from "../components/DateRange";
 import Pagination from "../components/Pagination";
 import ClockInWidget from "../components/ClockInWidget";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./EmployeeDashboard.scss";
 
 const EmployeeDashboard = () => {
@@ -161,8 +162,26 @@ const EmployeeDashboard = () => {
           />
         </div>
 
+        {/* Worktime Chart */}
+        {profile?.worktime_stats && profile.worktime_stats.length > 0 && (
+          <div className="card worktime-card" style={{ gridColumn: '1 / -1' }}>
+            <h3>Weekly Work Time (Avg Hours)</h3>
+            <div style={{ width: '100%', height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={profile.worktime_stats} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+                  <Tooltip cursor={{fill: 'var(--bg-color)'}} contentStyle={{ backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
+                  <Bar dataKey="avg_hours" fill="var(--accent-color)" radius={[4, 4, 0, 0]} name="Hours Worked" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {/* History Table */}
-        <div className="card history-card">
+        <div className="card history-card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ margin: 0 }}>My Leave History</h3>
             <input

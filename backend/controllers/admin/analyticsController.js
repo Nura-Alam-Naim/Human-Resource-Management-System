@@ -22,12 +22,14 @@ export const getAnalytics = async (req, res) => {
             SELECT lt.type_name as name, COUNT(lr.id) as value
             FROM leave_requests lr
             JOIN leave_types lt ON lr.type_id = lt.id
+            WHERE CURDATE() BETWEEN lr.start_date AND lr.end_date
             GROUP BY lt.id
         `);
 
         const [leave_status_distribution] = await db.query(`
             SELECT status as name, COUNT(id) as value
             FROM leave_requests
+            WHERE CURDATE() BETWEEN start_date AND end_date
             GROUP BY status
         `);
 
@@ -57,7 +59,8 @@ export const getActivityLogs = async (req, res) => {
     try {
         const q = `
             SELECT al.id, al.action, al.details, al.created_at,
-                   u1.name as performer_name, u2.name as target_name
+                   u1.name as performer_name, u1.role as performer_role,
+                   u2.name as target_name, u2.role as target_role
             FROM activity_logs al
             LEFT JOIN users u1 ON al.performed_by = u1.id
             LEFT JOIN users u2 ON al.target_user = u2.id

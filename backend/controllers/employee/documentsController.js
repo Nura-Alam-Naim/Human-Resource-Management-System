@@ -45,3 +45,38 @@ export const getMyDocuments = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const deleteDocument = async (req, res) => {
+    try {
+        const documentId = req.params.id;
+        const userId = req.user.id;
+
+        const [result] = await db.query("DELETE FROM documents WHERE id = ? AND user_id = ?", [documentId, userId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Document not found or access denied." });
+        }
+        res.json({ message: "Document deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting document:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const uploadProfilePicture = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "No image uploaded." });
+        }
+        
+        const userId = req.user.id;
+        const filePath = req.file.path; // e.g., 'uploads/16239123-file.png'
+
+        // Update the users table
+        await db.query("UPDATE users SET profile_picture = ? WHERE id = ?", [filePath, userId]);
+        
+        res.status(200).json({ message: "Profile picture updated successfully!", profile_picture: filePath });
+    } catch (error) {
+        console.error("Error uploading profile picture:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

@@ -6,7 +6,7 @@ export const profile = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const q = "SELECT id, name, email, role, total_leave_balance, created_at FROM users WHERE id = ?";
+        const q = "SELECT id, name, email, role, total_leave_balance, created_at, profile_picture FROM users WHERE id = ?";
         const [rows] = await db.query(q, [userId]);
 
         const leaveStatsQuery = "SELECT SUM(DATEDIFF(end_date, start_date) + 1) AS total_leaves_taken FROM leave_requests WHERE user_id = ? AND status = 'approved'";
@@ -14,6 +14,18 @@ export const profile = async (req, res) => {
 
         const userProfile = rows[0];
         userProfile.total_leaves_taken = leaveStats[0].total_leaves_taken || 0;
+
+        const worktimeQuery = `
+            SELECT DATE_FORMAT(date, '%a') as day, ROUND(AVG(TIMESTAMPDIFF(MINUTE, clock_in, clock_out) / 60), 1) as avg_hours
+            FROM attendance
+            WHERE user_id = ? 
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
+              AND clock_out IS NOT NULL
+            GROUP BY date
+            ORDER BY date ASC
+        `;
+        const [worktime_stats] = await db.query(worktimeQuery, [userId]);
+        userProfile.worktime_stats = worktime_stats;
 
         res.json(userProfile);
     } catch (error) {
@@ -126,12 +138,25 @@ export const cancelLeaveRequest = async (req, res) => {
         const requestId = req.params.request_id;
         const userId = req.user.id;
 
-        // Ensure we only cancel if it is still pending AND belongs to the logged-in user
-        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND status = 'pending' AND user_id = ?";
-        const [result] = await db.query(q, [requestId, userId]);
+        // Fetch old status to know if we need to refund
+        const [oldReq] = await db.query("SELECT status, start_date, end_date FROM leave_requests WHERE id = ? AND user_id = ?", [requestId, userId]);
+        if (oldReq.length === 0) {
+            return res.status(404).json({ message: "Request not found or does not belong to you." });
+        }
 
-        if (result.affectedRows === 0) {
-            return res.status(400).json({ message: "Cannot cancel. Request is either not pending, does not exist, or does not belong to you." });
+        const oldStatus = oldReq[0].status;
+        if (oldStatus === 'rejected' || oldStatus === 'cancelled') {
+            return res.status(400).json({ message: "Request is already cancelled or rejected." });
+        }
+
+        // Update to cancelled
+        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND user_id = ?";
+        await db.query(q, [requestId, userId]);
+
+        // Refund if it was approved
+        if (oldStatus === 'approved') {
+            const daysTaken = await calculateWorkingDays(oldReq[0].start_date, oldReq[0].end_date);
+            await db.query("UPDATE users SET total_leave_balance = total_leave_balance + ? WHERE id = ?", [daysTaken, userId]);
         }
 
         res.json({ message: "Leave request cancelled successfully!" });

@@ -15,7 +15,10 @@ import AdminSettings from './pages/AdminSettings';
 import Timesheets from './pages/Timesheets';
 import CompanyTimesheets from './pages/CompanyTimesheets';
 import PublicHolidays from './pages/PublicHolidays';
+import DepartmentView from './pages/DepartmentView';
 import Messages from './pages/Messages';
+import PayrollManagement from './pages/PayrollManagement';
+import MyPayslips from './pages/MyPayslips';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -51,17 +54,22 @@ const MainContent = () => {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/profile" element={<UserProfile />} />
-      {user.role === 'manager' && (
+      {(user.role === 'manager' || user.role === 'admin') && (
+        <Route path="/all-employees" element={<AllEmployees />} />
+      )}
+      {user.role === 'admin' && (
         <>
-          <Route path="/all-employees" element={user && (user.role === 'manager' || user.role === 'admin') ? <AllEmployees /> : <Navigate to="/dashboard" />} />
           <Route path="/settings" element={<AdminSettings />} />
           <Route path="/company-timesheets" element={<CompanyTimesheets />} />
           <Route path="/holidays" element={<PublicHolidays />} />
+          <Route path="/department/:id" element={<DepartmentView />} />
+          <Route path="/payroll" element={<PayrollManagement />} />
         </>
       )}
       <Route path="/my-timesheets" element={user ? <Timesheets /> : <Navigate to="/login" />} />
       <Route path="/org-chart" element={user ? <OrgChart /> : <Navigate to="/login" />} />
       <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
+      <Route path="/my-payslips" element={user ? <MyPayslips /> : <Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { Edit2, Save, X } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import DateRange from './DateRange';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const EmployeeProfileView = ({ data, onUpdate }) => {
   if (!data) return null;
   const { user: loggedInUser } = useAuth();
-  const { user, history } = data;
+  const { user, history, worktime_stats } = data;
   
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [designations, setDesignations] = useState([]);
@@ -156,6 +157,23 @@ const EmployeeProfileView = ({ data, onUpdate }) => {
           </table>
         )}
       </div>
+
+      {worktime_stats && worktime_stats.length > 0 && (
+        <div className="user-history-section" style={{ marginTop: '24px' }}>
+          <h4>Weekly Work Time (Avg Hours)</h4>
+          <div style={{ width: '100%', height: '300px', marginTop: '16px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={worktime_stats} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+                <Tooltip cursor={{fill: 'var(--bg-color)'}} contentStyle={{ backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
+                <Bar dataKey="avg_hours" fill="var(--accent-color)" radius={[4, 4, 0, 0]} name="Hours Worked" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </>
   );
 };

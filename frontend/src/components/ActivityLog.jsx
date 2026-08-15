@@ -59,7 +59,9 @@ const ActivityLog = () => {
                 )}
               </div>
               <div className="log-performer">
-                By: {log.performer_name || 'Unknown'}
+                By: <span style={{ color: log.performer_role === 'manager' ? '#3b82f6' : (log.performer_role === 'employee' ? '#10b981' : 'inherit') }}>
+                  {log.performer_name || 'Unknown'}
+                </span>
               </div>
             </div>
           </div>

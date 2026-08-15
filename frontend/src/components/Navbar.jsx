@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare } from 'lucide-react';
+import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare, DollarSign } from 'lucide-react';
 import './Navbar.scss';
 
 const Navbar = () => {
@@ -29,7 +29,14 @@ const Navbar = () => {
       </div>
 
       <div className="navbar-controls">
-        <div className="user-info">
+        <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="avatar-circle" style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+            {user.profile_picture ? (
+              <img src={`http://localhost:8800/${user.profile_picture}`} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={20} />
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span>{user.name}</span>
             <span className="user-role">{user.role}</span>
@@ -65,6 +72,9 @@ const Navbar = () => {
               <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`}>
                 <Settings size={16} /> Settings
               </Link>
+              <Link to="/payroll" className={`nav-link ${location.pathname === '/payroll' ? 'active' : ''}`}>
+                <DollarSign size={16} /> Payroll
+              </Link>
             </>
           )}
 
@@ -73,6 +83,9 @@ const Navbar = () => {
             <>
               <Link to="/my-timesheets" className={`nav-link ${location.pathname === '/my-timesheets' ? 'active' : ''}`}>
                 <Clock size={16} /> My Timesheets
+              </Link>
+              <Link to="/my-payslips" className={`nav-link ${location.pathname === '/my-payslips' ? 'active' : ''}`}>
+                <DollarSign size={16} /> My Payslips
               </Link>
             </>
           )}

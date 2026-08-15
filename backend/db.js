@@ -264,7 +264,7 @@ const initializeDB = async () => {
     const [[{ userCount }]] = await db.query("SELECT COUNT(*) as userCount FROM users");
     if (userCount < 5) {
       console.log("Seeding database with mock data for testing and visibility...");
-      const mockPassword = await bcrypt.hash('password123', 10);
+      const mockPassword = await bcrypt.hash('12345', 10);
       
       // Insert mock users
       await db.query(`
@@ -324,6 +324,67 @@ const initializeDB = async () => {
       `, [mockUsers[2]?.id || 3, mockUsers[3]?.id || 4, mockUsers[4]?.id || 5, mockUsers[5]?.id || 6]);
       
       console.log("Mock data seeding complete.");
+    }
+
+    const [documentsTable] = await db.query("SHOW TABLES LIKE 'documents'");
+    if (documentsTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 5 (Employee Profiles & Documents)...");
+      
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS documents (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          request_id INT,
+          file_name VARCHAR(255) NOT NULL,
+          file_path VARCHAR(255) NOT NULL,
+          doc_type VARCHAR(100) DEFAULT 'General',
+          uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (request_id) REFERENCES leave_requests(id) ON DELETE CASCADE
+        );
+      `);
+
+      const [profilePicCol] = await db.query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
+      if (profilePicCol.length === 0) {
+        await db.query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL;");
+      }
+
+      console.log("HRMS Phase 5 Migration Complete. 'documents' created and profile_picture added.");
+    }
+
+    // --- HRMS PHASE 6 MIGRATION (Payroll & Salary) ---
+    const [payslipsTable] = await db.query("SHOW TABLES LIKE 'payslips'");
+    if (payslipsTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 6 (Payroll & Salary)...");
+      
+      const [baseSalaryCol] = await db.query("SHOW COLUMNS FROM users LIKE 'base_salary'");
+      if (baseSalaryCol.length === 0) {
+        await db.query("ALTER TABLE users ADD COLUMN base_salary DECIMAL(10,2) DEFAULT 0.00;");
+        // Give some seed data for base salary
+        await db.query("UPDATE users SET base_salary = 5000.00 WHERE role = 'employee'");
+        await db.query("UPDATE users SET base_salary = 8000.00 WHERE role = 'manager'");
+        await db.query("UPDATE users SET base_salary = 10000.00 WHERE role = 'admin'");
+      }
+
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS payslips (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          month INT NOT NULL,
+          year INT NOT NULL,
+          base_salary DECIMAL(10,2) NOT NULL,
+          days_worked INT NOT NULL,
+          gross_pay DECIMAL(10,2) NOT NULL,
+          deductions DECIMAL(10,2) DEFAULT 0.00,
+          net_pay DECIMAL(10,2) NOT NULL,
+          status ENUM('draft', 'generated', 'paid') DEFAULT 'generated',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_payslip (user_id, month, year)
+        );
+      `);
+
+      console.log("HRMS Phase 6 Migration Complete. 'payslips' created and base_salary added.");
     }
 
   } catch (error) {

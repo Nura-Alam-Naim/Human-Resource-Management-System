@@ -156,14 +156,18 @@ export const getAllRecords = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
 
+    // Fetch all non-admin users and their attendance for TODAY
     const query = `
-      SELECT a.*, u.name as employee_name, u.email as employee_email, 
-             d.name as department_name, des.title as designation_title
-      FROM attendance a
-      JOIN users u ON a.user_id = u.id
+      SELECT u.id as user_id, u.name as employee_name, u.email as employee_email, u.role,
+             d.name as department_name, des.title as designation_title,
+             a.id, COALESCE(a.date, CURDATE()) as date, a.clock_in, a.clock_out, 
+             COALESCE(a.status, 'absent') as status
+      FROM users u
+      LEFT JOIN attendance a ON u.id = a.user_id AND a.date = CURDATE()
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN designations des ON u.designation_id = des.id
-      ORDER BY a.date DESC, a.clock_in DESC
+      WHERE u.role != 'admin'
+      ORDER BY u.role, u.name
       LIMIT ? OFFSET ?
     `;
     

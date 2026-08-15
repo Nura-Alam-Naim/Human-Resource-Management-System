@@ -27,9 +27,21 @@ export const getUserProfile = async (req, res) => {
         `;
         const [historyRows] = await db.query(historyQuery, [userId]);
 
+        const worktimeQuery = `
+            SELECT DATE_FORMAT(date, '%a') as day, ROUND(AVG(TIMESTAMPDIFF(MINUTE, clock_in, clock_out) / 60), 1) as avg_hours
+            FROM attendance
+            WHERE user_id = ? 
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
+              AND clock_out IS NOT NULL
+            GROUP BY date
+            ORDER BY date ASC
+        `;
+        const [worktimeRows] = await db.query(worktimeQuery, [userId]);
+
         res.json({
             user: rows[0],
-            history: historyRows
+            history: historyRows,
+            worktime_stats: worktimeRows
         });
     } catch (error) {
         console.error("Error fetching user profile", error);
@@ -126,6 +138,48 @@ export const updateUserDesignation = async (req, res) => {
         res.json({ message: "Designation updated successfully" });
     } catch (error) {
         console.error("Error updating user designation", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const updateUserRole = async (req, res) => {
+    try {
+        const userId = req.params.user_id;
+        const { role } = req.body;
+        
+        if (!role || !['admin', 'manager', 'employee'].includes(role)) {
+            return res.status(400).json({ message: "Invalid role specified." });
+        }
+
+        await db.query('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+        
+        await db.query(
+            "INSERT INTO activity_logs (action, performed_by, target_user, details) VALUES (?, ?, ?, ?)",
+            ['Update Role', req.user.id, userId, `Changed role to ${role}`]
+        );
+
+        res.json({ message: "Role updated successfully" });
+    } catch (error) {
+        console.error("Error updating user role", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const updateUserDepartment = async (req, res) => {
+    try {
+        const userId = req.params.user_id;
+        const { department_id } = req.body;
+        
+        await db.query('UPDATE users SET department_id = ? WHERE id = ?', [department_id, userId]);
+        
+        await db.query(
+            "INSERT INTO activity_logs (action, performed_by, target_user, details) VALUES (?, ?, ?, ?)",
+            ['Update Department', req.user.id, userId, `Assigned to department ID: ${department_id}`]
+        );
+
+        res.json({ message: "Department updated successfully" });
+    } catch (error) {
+        console.error("Error updating user department", error);
         res.status(500).json({ message: "Server error" });
     }
 };

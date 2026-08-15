@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTeamAnalytics, getTeamUsers, getTeamUserProfile, createMemberRequest, getMyMemberRequests, getTeamDesignations, updateTeamUserDesignation, createTeamDesignation } from '../../controllers/manager/teamController.js';
+import { getTeamAnalytics, getTeamUsers, getTeamUserProfile, createMemberRequest, getMyMemberRequests, getTeamDesignations, updateTeamUserDesignation, createTeamDesignation, createTransferRequest } from '../../controllers/manager/teamController.js';
 import { verifyToken, verifyManagerOrAdmin } from '../../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.post('/request-member', createMemberRequest);
 router.get('/my-requests', getMyMemberRequests);
 router.get('/designations', getTeamDesignations);
 router.post('/designations', createTeamDesignation);
+router.post('/transfer-request', createTransferRequest);
 router.put('/users/:user_id/designation', updateTeamUserDesignation);
 
 export default router;

@@ -1,0 +1,122 @@
+.my-payslips-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-out;
+
+  .payslips-header {
+    margin-bottom: 32px;
+    
+    h2 {
+      font-size: 1.5rem;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+  }
+
+  .payslips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+
+    .empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 24px;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      border: 1px dashed var(--border-color);
+      text-align: center;
+
+      h3 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+      p {
+        color: var(--text-secondary);
+      }
+    }
+  }
+
+  .payslip-card {
+    display: flex;
+    flex-direction: column;
+
+    .ps-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+
+      .ps-date {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        h3 {
+          font-size: 1.125rem;
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    .ps-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+
+      .ps-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+
+        span:last-child {
+          font-weight: 500;
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          gap: 2px;
+        }
+
+        &.text-error span:last-child {
+          color: var(--error-color);
+        }
+      }
+
+      .ps-total {
+        margin-top: 8px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border-color);
+        font-size: 1.125rem;
+        font-weight: 600;
+        
+        span:first-child {
+          color: var(--text-primary);
+        }
+        span:last-child {
+          color: var(--success-color);
+          font-size: 1.25rem;
+        }
+      }
+    }
+
+    .ps-footer {
+      .w-full {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+    }
+  }
+}

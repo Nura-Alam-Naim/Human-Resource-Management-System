@@ -1,0 +1,85 @@
+.payroll-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-out;
+
+  .payroll-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h2 {
+      font-size: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .tab-buttons {
+      display: flex;
+      background-color: var(--card-bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+
+      .tab-btn {
+        padding: 8px 16px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.active {
+          background-color: var(--accent-color);
+          color: white;
+        }
+
+        &:hover:not(.active) {
+          background-color: rgba(59, 130, 246, 0.1);
+          color: var(--accent-color);
+        }
+      }
+    }
+  }
+
+  .filters-section {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+
+    .form-group {
+      flex: 1;
+      max-width: 200px;
+
+      label {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        outline: none;
+
+        &:focus {
+          border-color: var(--accent-color);
+        }
+      }
+    }
+  }
+
+  .mt-4 {
+    margin-top: 1.5rem;
+  }
+}

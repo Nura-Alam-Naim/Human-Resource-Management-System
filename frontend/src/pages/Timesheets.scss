@@ -8,20 +8,20 @@
     th, td {
       padding: 1rem;
       text-align: left;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--border-color);
     }
 
     th {
       font-weight: 600;
-      color: #64748b;
-      background: #f8fafc;
+      color: var(--text-secondary);
+      background: var(--bg-color);
     }
 
     tbody tr {
       transition: background-color 0.2s;
       
       &:hover {
-        background-color: #f1f5f9;
+        background-color: var(--bg-color);
       }
     }
   }
