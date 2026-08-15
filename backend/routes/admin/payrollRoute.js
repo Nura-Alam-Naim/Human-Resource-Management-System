@@ -1,11 +1,11 @@
 import express from 'express';
 import { getEmployeesSalary, generatePayslip, getAllPayslips } from '../../controllers/admin/payrollController.js';
-import { verifyToken, isAdmin } from '../../middleware/authMiddleware.js';
+import { verifyToken, verifyAdmin } from '../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(verifyToken);
-router.use(isAdmin);
+router.use(verifyAdmin);
 
 router.get('/salaries', getEmployeesSalary);
 router.post('/generate', generatePayslip);
