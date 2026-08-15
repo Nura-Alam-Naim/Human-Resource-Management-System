@@ -23,6 +23,12 @@ const AllEmployees = () => {
   const [designations, setDesignations] = useState([]);
   const [editingUserId, setEditingUserId] = useState(null);
   const [editDesignationId, setEditDesignationId] = useState('');
+  
+  // Member Request Modal states
+  const [isMemberRequestModalOpen, setIsMemberRequestModalOpen] = useState(false);
+  const [memberRequestForm, setMemberRequestForm] = useState({ requested_role: '', description: '' });
+  const [memberRequests, setMemberRequests] = useState([]);
+  
   const limit = 10;
 
   const fetchUsers = async () => {
@@ -58,9 +64,20 @@ const AllEmployees = () => {
     }
   };
 
+  const fetchMemberRequests = async () => {
+    if (loggedInUser.role !== 'manager') return;
+    try {
+      const res = await axios.get('/api/manager/team/my-requests');
+      setMemberRequests(res.data);
+    } catch (error) {
+      console.error("Error fetching member requests", error);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchDesignations();
+    fetchMemberRequests();
   }, [page, searchTerm]);
 
   const handleSaveRole = async (userId, newDesignationId) => {
@@ -89,13 +106,16 @@ const AllEmployees = () => {
     }
   };
 
-  const handleRequestTransfer = async (employeeId) => {
-    if (!window.confirm(`Request this employee to be transferred to your department?`)) return;
+  const handleSubmitMemberRequest = async (e) => {
+    e.preventDefault();
     try {
-      await axios.post(`/api/manager/team/transfer-request`, { employee_id: employeeId });
-      toast.success('Transfer request sent to Admin!');
+      await axios.post('/api/manager/team/request-member', memberRequestForm);
+      toast.success('Member request submitted to Admin!');
+      setIsMemberRequestModalOpen(false);
+      setMemberRequestForm({ requested_role: '', description: '' });
+      fetchMemberRequests();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to request transfer");
+      toast.error(error.response?.data?.message || "Failed to submit request");
     }
   };
 
@@ -182,8 +202,16 @@ const AllEmployees = () => {
           </div>
 
           <div className="card">
-            <div className="card-header p-4 border-b">
+            <div className="card-header p-4 border-b flex justify-between items-center">
               <h3 className="m-0 text-lg font-semibold text-gray-800">Employees</h3>
+              {loggedInUser.role === 'manager' && (
+                <button 
+                  className="btn btn-primary btn-sm flex items-center gap-1"
+                  onClick={() => setIsMemberRequestModalOpen(true)}
+                >
+                  <UserIcon size={14} /> Request New Member
+                </button>
+              )}
             </div>
             <div className="table-container">
               <UserTable 
@@ -197,7 +225,6 @@ const AllEmployees = () => {
                 designations={designations}
                 handleSaveRole={handleSaveRole}
                 handlePromoteRole={handlePromoteRole}
-                handleRequestTransfer={handleRequestTransfer}
               />
             </div>
           </div>
@@ -214,11 +241,83 @@ const AllEmployees = () => {
       >
         <EmployeeProfileView data={selectedUser} onUpdate={() => { viewUserProfile(selectedUser.user.id); fetchUsers(); }} />
       </Modal>
+
+      {/* Member Request Modal */}
+      <Modal
+        isOpen={isMemberRequestModalOpen}
+        onClose={() => setIsMemberRequestModalOpen(false)}
+        title="Request New Team Member"
+      >
+        <form onSubmit={handleSubmitMemberRequest} className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Submit a request to Admin to assign a new employee to your department.
+          </p>
+          <div className="form-group">
+            <label>Requested Role / Job Title</label>
+            <input 
+              type="text" 
+              required 
+              className="form-control"
+              value={memberRequestForm.requested_role}
+              onChange={e => setMemberRequestForm({...memberRequestForm, requested_role: e.target.value})}
+              placeholder="e.g. Senior Frontend Developer"
+            />
+          </div>
+          <div className="form-group">
+            <label>Why do you need this member? (Optional)</label>
+            <textarea 
+              className="form-control"
+              rows="3"
+              value={memberRequestForm.description}
+              onChange={e => setMemberRequestForm({...memberRequestForm, description: e.target.value})}
+              placeholder="e.g. We are expanding the team and need more capacity..."
+            ></textarea>
+          </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <button type="button" className="btn btn-outline" onClick={() => setIsMemberRequestModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Submit Request</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Display Manager's Pending Requests */}
+      {loggedInUser.role === 'manager' && memberRequests.length > 0 && (
+        <div className="card mt-8 border-indigo-500">
+          <div className="card-header p-4 border-b">
+            <h3 className="m-0 text-lg font-semibold text-indigo-600">Your Member Requests</h3>
+          </div>
+          <div className="table-container p-0">
+            <table className="m-0">
+              <thead>
+                <tr>
+                  <th>Requested Role</th>
+                  <th>Description</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberRequests.map(req => (
+                  <tr key={req.id}>
+                    <td className="font-medium">{req.requested_role}</td>
+                    <td className="text-gray-600 text-sm">{req.description || 'N/A'}</td>
+                    <td className="text-sm">{new Date(req.created_at).toLocaleDateString()}</td>
+                    <td>
+                      <StatusBadge status={req.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
 
-const UserTable = ({ users, loggedInUser, viewUserProfile, editingUserId, setEditingUserId, editDesignationId, setEditDesignationId, designations, handleSaveRole, handlePromoteRole, handleRequestTransfer }) => {
+const UserTable = ({ users, loggedInUser, viewUserProfile, editingUserId, setEditingUserId, editDesignationId, setEditDesignationId, designations, handleSaveRole, handlePromoteRole }) => {
   if (users.length === 0) {
     return <div className="text-center p-4 text-gray-500">No users found in this category.</div>;
   }
@@ -341,9 +440,7 @@ const UserTable = ({ users, loggedInUser, viewUserProfile, editingUserId, setEdi
             )}
             {loggedInUser.role === 'manager' && (
               <td>
-                {user.role === 'employee' && (
-                  <button className="btn btn-primary btn-sm text-xs py-1 px-2" onClick={() => handleRequestTransfer(user.id)}>Request Transfer</button>
-                )}
+                {/* Manager actions reserved for future */}
               </td>
             )}
           </tr>

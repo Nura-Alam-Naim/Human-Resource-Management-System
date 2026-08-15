@@ -229,6 +229,21 @@ const initializeDB = async () => {
       );
     `);
 
+    // Ensure member_requests table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS member_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        manager_id INT NOT NULL,
+        department_id INT NOT NULL,
+        requested_role VARCHAR(100) NOT NULL,
+        description TEXT,
+        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+      );
+    `);
+
     // --- HRMS PHASE 2 MIGRATION (Attendance) ---
     const [tables] = await db.query("SHOW TABLES LIKE 'attendance'");
     if (tables.length === 0) {
