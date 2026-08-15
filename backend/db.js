@@ -165,6 +165,20 @@ const initializeDB = async () => {
         ALTER TABLE departments
         ADD FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL;
       `);
+
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS transfer_requests (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id INT NOT NULL,
+          requested_by INT NOT NULL,
+          target_department_id INT NOT NULL,
+          status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (target_department_id) REFERENCES departments(id) ON DELETE CASCADE
+        );
+      `);
       
       // Seed initial HRMS Phase 1 data
       await db.query(`INSERT IGNORE INTO departments (id, name) VALUES (1, 'Engineering'), (2, 'Human Resources'), (3, 'Sales')`);
