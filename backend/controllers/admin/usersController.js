@@ -100,7 +100,7 @@ export const getAllUsers = async (req, res) => {
         const [[{ total }]] = await db.query(countQuery, params);
 
         const q = `
-            SELECT u.id, u.employee_id, u.name, u.email, u.role, u.total_leave_balance, u.created_at,
+            SELECT u.id, u.employee_id, u.name, u.email, u.role, u.total_leave_balance, u.created_at, u.department_id, u.profile_picture,
             d.name as department_name, des.title as designation_title,
             COALESCE(SUM(CASE WHEN lr.status = 'approved' THEN DATEDIFF(lr.end_date, lr.start_date) + 1 ELSE 0 END), 0) AS total_leaves_taken,
             (SELECT COALESCE(ROUND(AVG(TIMESTAMPDIFF(MINUTE, a.clock_in, a.clock_out) / 60), 1), 0)

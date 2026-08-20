@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { User as UserIcon, Mail, Calendar, Shield, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -435,12 +436,19 @@ const UserTable = ({ users, loggedInUser, viewUserProfile, editingUserId, setEdi
                   {user.role !== 'employee' && user.id !== loggedInUser.id && (
                     <button className="btn btn-outline btn-sm text-xs py-1 px-2" onClick={() => handlePromoteRole(user.id, 'employee')}>Demote</button>
                   )}
+                  {user.id !== loggedInUser.id && (
+                    <Link to={`/messages?user_id=${user.id}`} className="btn btn-outline btn-primary btn-sm text-xs py-1 px-2">Message</Link>
+                  )}
                 </div>
               </td>
             )}
             {loggedInUser.role === 'manager' && (
               <td>
-                {/* Manager actions reserved for future */}
+                <div className="flex gap-2">
+                  {user.id !== loggedInUser.id && (
+                    <Link to={`/messages?user_id=${user.id}`} className="btn btn-outline btn-primary btn-sm text-xs py-1 px-2">Message</Link>
+                  )}
+                </div>
               </td>
             )}
           </tr>

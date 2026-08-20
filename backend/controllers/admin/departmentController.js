@@ -4,7 +4,8 @@ export const getAllDepartments = async (req, res) => {
   try {
     const [departments] = await db.query(`
       SELECT d.*, u.name as manager_name, u.email as manager_email,
-      (SELECT COUNT(*) FROM transfer_requests tr WHERE tr.target_department_id = d.id AND tr.status = 'pending') as pending_transfers
+      (SELECT COUNT(*) FROM transfer_requests tr WHERE tr.target_department_id = d.id AND tr.status = 'pending') as pending_transfers,
+      (SELECT COUNT(*) FROM member_requests mr WHERE mr.department_id = d.id AND mr.status = 'pending') as pending_member_requests
       FROM departments d
       LEFT JOIN users u ON d.manager_id = u.id
       ORDER BY d.name ASC
@@ -91,7 +92,15 @@ export const getDepartmentDetails = async (req, res) => {
       ORDER BY tr.created_at DESC
     `, [id]);
 
-    res.json({ department, employees, transferRequests });
+    const [memberRequests] = await db.query(`
+      SELECT mr.id, mr.requested_role, mr.description, mr.status, mr.created_at, u.name as manager_name
+      FROM member_requests mr
+      JOIN users u ON mr.manager_id = u.id
+      WHERE mr.department_id = ? AND mr.status = 'pending'
+      ORDER BY mr.created_at DESC
+    `, [id]);
+
+    res.json({ department, employees, transferRequests, memberRequests });
   } catch (error) {
     console.error('Error fetching department details:', error);
     res.status(500).json({ error: 'Failed to fetch department details' });

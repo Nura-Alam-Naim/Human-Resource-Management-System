@@ -1,0 +1,5 @@
+- `[x]` Update `backend/controllers/employee/leavesController.js` (add `worktime_stats` to `profile` endpoint)
+- `[x]` Update `backend/controllers/manager/teamController.js` (add `worktime_stats` to `getTeamUserProfile`)
+- `[x]` Update `backend/controllers/admin/usersController.js` (add `worktime_stats` to `getUserProfile`)
+- `[x]` Update `frontend/src/pages/EmployeeDashboard.jsx` (render the Recharts Bar Chart)
+- `[x]` Update `frontend/src/components/EmployeeProfileView.jsx` (render the Recharts Bar Chart)

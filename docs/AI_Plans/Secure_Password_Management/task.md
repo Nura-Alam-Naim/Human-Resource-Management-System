@@ -1,0 +1,8 @@
+- [ ] Backend: Set `JWT_SECRET=firstproject` in `.env`.
+- [ ] Backend: Install `bcryptjs`.
+- [ ] Backend: Update `authController.js` (`login`, `me`, `changePassword`) to use `bcrypt` and flag `requiresPasswordChange`.
+- [ ] Backend: Update `admin/studentController.js` `createStudent` to hash password.
+- [ ] Backend: Update `admin/facultyController.js` `createFaculty` to hash password.
+- [ ] Backend: Update `admin/miscController.js` `createAdmin` to hash password.
+- [ ] Frontend: Create `ForceChangePassword.jsx` page.
+- [ ] Frontend: Update `AuthContext.jsx` and `App.jsx` to enforce the `requiresPasswordChange` routing interceptor.

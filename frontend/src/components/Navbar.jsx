@@ -1,14 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare, DollarSign } from 'lucide-react';
+import axios from 'axios';
 import './Navbar.scss';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await axios.get('/api/messages/unread-count');
+        setUnreadCount(res.data.unreadCount);
+      } catch (error) {}
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10s for notifications
+    return () => clearInterval(interval);
+  }, [user]);
 
   if (!user) return null;
 
@@ -91,8 +108,13 @@ const Navbar = () => {
           )}
 
           {/* Global Messaging (For Everyone) */}
-          <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`}>
+          <Link to="/messages" className={`nav-link ${location.pathname === '/messages' ? 'active' : ''}`} style={{ position: 'relative' }}>
             <MessageSquare size={16} /> Messages
+            {unreadCount > 0 && (
+              <span className="badge badge-danger rounded-full px-1 text-[10px] absolute -top-1 -right-2">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
         </div>
 

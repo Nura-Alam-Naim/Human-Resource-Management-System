@@ -77,13 +77,23 @@ const DepartmentView = () => {
     }
   };
 
+  const handleMemberRequest = async (requestId, status) => {
+    try {
+      await axios.put(`/api/requests/member/${requestId}`, { status });
+      toast.success(`Request ${status} successfully!`);
+      fetchDepartmentData();
+    } catch (error) {
+      toast.error(`Failed to update request.`);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center mt-10"><div className="spinner"></div></div>;
   }
 
   if (!data) return <div>Department not found.</div>;
 
-  const { department, employees, transferRequests } = data;
+  const { department, employees, transferRequests, memberRequests } = data;
 
   return (
     <div className="dashboard-container">
@@ -251,6 +261,58 @@ const DepartmentView = () => {
                         <button 
                           className="btn btn-danger btn-sm flex items-center gap-1"
                           onClick={() => handleTransferRequest(req.id, 'rejected')}
+                        >
+                          <X size={14} /> Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <div className="card border-indigo-500 mt-6">
+        <div className="card-header p-4 border-b flex justify-between items-center">
+          <h3 className="m-0 font-semibold text-indigo-600">Pending Member Requests</h3>
+          <span className="bg-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+            {memberRequests?.length || 0} Pending
+          </span>
+        </div>
+        <div className="table-container p-0">
+          {(!memberRequests || memberRequests.length === 0) ? (
+            <div className="p-8 text-center text-gray-500">No pending member requests for this department.</div>
+          ) : (
+            <table className="m-0">
+              <thead>
+                <tr>
+                  <th>Requested Date</th>
+                  <th>Requested By</th>
+                  <th>Role Needed</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberRequests.map(req => (
+                  <tr key={req.id}>
+                    <td>{new Date(req.created_at).toLocaleDateString()}</td>
+                    <td className="font-medium">{req.manager_name}</td>
+                    <td className="font-medium text-indigo-600">{req.requested_role}</td>
+                    <td className="text-gray-600 text-sm">{req.description || 'N/A'}</td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button 
+                          className="btn btn-primary btn-sm flex items-center gap-1"
+                          onClick={() => navigate(`/resolve-request/${req.id}`)}
+                        >
+                          <Check size={14} /> Resolve
+                        </button>
+                        <button 
+                          className="btn btn-danger btn-sm flex items-center gap-1"
+                          onClick={() => handleMemberRequest(req.id, 'rejected')}
                         >
                           <X size={14} /> Reject
                         </button>

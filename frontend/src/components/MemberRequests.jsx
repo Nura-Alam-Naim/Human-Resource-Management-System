@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { UserPlus, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 
 const MemberRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchRequests = async () => {
     try {
@@ -73,8 +75,18 @@ const MemberRequests = () => {
                 <td>
                   {req.status === 'pending' ? (
                     <div className="flex gap-2">
-                      <button onClick={() => handleUpdate(req.id, 'approved')} className="btn btn-success btn-sm"><Check size={14}/></button>
-                      <button onClick={() => handleUpdate(req.id, 'rejected')} className="btn btn-danger btn-sm"><X size={14}/></button>
+                      <button 
+                        onClick={() => navigate(`/resolve-request/${req.id}`)} 
+                        className="btn btn-primary btn-sm"
+                      >
+                        Resolve
+                      </button>
+                      <button 
+                        onClick={() => handleUpdate(req.id, 'rejected')} 
+                        className="btn btn-danger btn-sm"
+                      >
+                        <X size={14}/>
+                      </button>
                     </div>
                   ) : (
                     <span className="text-secondary text-sm">Resolved</span>

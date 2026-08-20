@@ -362,9 +362,10 @@ const initializeDB = async () => {
       console.log("Mock data seeding complete.");
     }
 
+    // --- HRMS PHASE 5 MIGRATION (Documents & Profile Picture) ---
     const [documentsTable] = await db.query("SHOW TABLES LIKE 'documents'");
     if (documentsTable.length === 0) {
-      console.log("Upgrading database schema for HRMS Phase 5 (Employee Profiles & Documents)...");
+      console.log("Upgrading database schema for HRMS Phase 5 (Documents)...");
       
       await db.query(`
         CREATE TABLE IF NOT EXISTS documents (
@@ -380,27 +381,20 @@ const initializeDB = async () => {
         );
       `);
 
-      const [profilePicCol] = await db.query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
-      if (profilePicCol.length === 0) {
-        await db.query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL;");
-      }
+      console.log("HRMS Phase 5 Migration Complete. 'documents' created.");
+    }
 
-      console.log("HRMS Phase 5 Migration Complete. 'documents' created and profile_picture added.");
+    // Ensure profile_picture column exists (independent of documents table)
+    const [profilePicCol] = await db.query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
+    if (profilePicCol.length === 0) {
+      await db.query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL;");
+      console.log("Added 'profile_picture' column to users table.");
     }
 
     // --- HRMS PHASE 6 MIGRATION (Payroll & Salary) ---
     const [payslipsTable] = await db.query("SHOW TABLES LIKE 'payslips'");
     if (payslipsTable.length === 0) {
       console.log("Upgrading database schema for HRMS Phase 6 (Payroll & Salary)...");
-      
-      const [baseSalaryCol] = await db.query("SHOW COLUMNS FROM users LIKE 'base_salary'");
-      if (baseSalaryCol.length === 0) {
-        await db.query("ALTER TABLE users ADD COLUMN base_salary DECIMAL(10,2) DEFAULT 0.00;");
-        // Give some seed data for base salary
-        await db.query("UPDATE users SET base_salary = 5000.00 WHERE role = 'employee'");
-        await db.query("UPDATE users SET base_salary = 8000.00 WHERE role = 'manager'");
-        await db.query("UPDATE users SET base_salary = 10000.00 WHERE role = 'admin'");
-      }
 
       await db.query(`
         CREATE TABLE IF NOT EXISTS payslips (
@@ -420,7 +414,38 @@ const initializeDB = async () => {
         );
       `);
 
-      console.log("HRMS Phase 6 Migration Complete. 'payslips' created and base_salary added.");
+      console.log("HRMS Phase 6 Migration Complete. 'payslips' created.");
+    }
+
+    // Ensure base_salary column exists
+    const [baseSalaryCol] = await db.query("SHOW COLUMNS FROM users LIKE 'base_salary'");
+    if (baseSalaryCol.length === 0) {
+      await db.query("ALTER TABLE users ADD COLUMN base_salary DECIMAL(10,2) DEFAULT 0.00;");
+      // Give some seed data for base salary
+      await db.query("UPDATE users SET base_salary = 5000.00 WHERE role = 'employee'");
+      await db.query("UPDATE users SET base_salary = 8000.00 WHERE role = 'manager'");
+      await db.query("UPDATE users SET base_salary = 10000.00 WHERE role = 'admin'");
+      console.log("Added 'base_salary' column to users table.");
+    }
+
+    // --- HRMS PHASE 7 MIGRATION (Internal Chat & Messaging) ---
+    const [messagesTable] = await db.query("SHOW TABLES LIKE 'internal_messages'");
+    if (messagesTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 7 (Internal Chat & Messaging)...");
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS internal_messages (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          sender_id INT NOT NULL,
+          receiver_id INT,
+          target_role ENUM('admin') DEFAULT NULL,
+          message TEXT NOT NULL,
+          is_read BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+      console.log("HRMS Phase 7 Migration Complete. 'internal_messages' created.");
     }
 
   } catch (error) {

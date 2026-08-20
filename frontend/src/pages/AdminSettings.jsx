@@ -7,12 +7,13 @@ import toast from 'react-hot-toast';
 import './AdminSettings.scss';
 
 import { useNavigate } from 'react-router-dom';
+import MemberRequests from '../components/MemberRequests';
+import TransferEmployee from './TransferEmployee';
 
 const AdminSettings = () => {
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
-  const [memberRequests, setMemberRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -26,14 +27,12 @@ const AdminSettings = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [deptRes, usersRes, requestsRes] = await Promise.all([
+      const [deptRes, usersRes] = await Promise.all([
         axios.get('/api/departments'),
-        axios.get('/api/admin/leaves/users?limit=1000'), // get all users to populate manager dropdown
-        axios.get('/api/requests/member') // Fetch member requests
+        axios.get('/api/admin/leaves/users?limit=1000') // get all users to populate manager dropdown
       ]);
       setDepartments(deptRes.data);
       setUsers(usersRes.data.data);
-      setMemberRequests(requestsRes.data);
     } catch (error) {
       toast.error('Failed to load settings data');
     } finally {
@@ -77,16 +76,6 @@ const AdminSettings = () => {
     setIsDesigModalOpen(true);
   };
 
-  const handleRequestStatusUpdate = async (requestId, newStatus) => {
-    try {
-      await axios.put(`/api/requests/member/${requestId}`, { status: newStatus });
-      toast.success(`Request ${newStatus} successfully!`);
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to update request status.');
-    }
-  };
-
   if (loading) {
     return <div className="flex justify-center mt-10"><div className="spinner"></div></div>;
   }
@@ -116,9 +105,9 @@ const AdminSettings = () => {
               className="card dept-card cursor-pointer hover:shadow-lg transition-shadow relative"
               onClick={() => navigate(`/department/${dept.id}`)}
             >
-              {dept.pending_transfers > 0 && (
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
-                  {dept.pending_transfers}
+              {(dept.pending_transfers > 0 || dept.pending_member_requests > 0) && (
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md" title="Pending requests">
+                  {(dept.pending_transfers || 0) + (dept.pending_member_requests || 0)}
                 </div>
               )}
               <div className="dept-card-header">
@@ -150,69 +139,12 @@ const AdminSettings = () => {
       </div>
 
       {/* Member Requests Section */}
-      <div className="card mt-8 border-t-4 border-indigo-500">
-        <div className="card-header p-4 border-b">
-          <h3 className="m-0 text-lg font-semibold text-gray-800">Pending Member Requests</h3>
-        </div>
-        <div className="table-container p-0">
-          {memberRequests.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No pending member requests from managers.</div>
-          ) : (
-            <table className="m-0">
-              <thead>
-                <tr>
-                  <th>Requested By</th>
-                  <th>Department</th>
-                  <th>Role Needed</th>
-                  <th>Description</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {memberRequests.map(req => (
-                  <tr key={req.id}>
-                    <td className="font-medium">{req.manager_name}</td>
-                    <td>{req.department_name}</td>
-                    <td className="font-medium text-indigo-600">{req.requested_role}</td>
-                    <td className="text-sm text-gray-600 max-w-xs truncate" title={req.description}>{req.description || 'N/A'}</td>
-                    <td className="text-sm">{new Date(req.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <span className={`badge ${req.status === 'pending' ? 'badge-warning' : (req.status === 'approved' ? 'badge-success' : 'badge-danger')}`}>
-                        {req.status}
-                      </span>
-                    </td>
-                    <td>
-                      {req.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button 
-                            className="btn btn-success btn-sm flex items-center gap-1"
-                            onClick={() => handleRequestStatusUpdate(req.id, 'approved')}
-                          >
-                            Approve
-                          </button>
-                          <button 
-                            className="btn btn-danger btn-sm flex items-center gap-1"
-                            onClick={() => handleRequestStatusUpdate(req.id, 'rejected')}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                      {req.status === 'approved' && (
-                        <span className="text-xs text-gray-500">
-                          (Go to Department View to assign an employee)
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      <div className="mt-8">
+        <MemberRequests />
       </div>
+
+      {/* Transfer Employee Section */}
+      <TransferEmployee />
 
       {/* Department Modal */}
       <Modal 

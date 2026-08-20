@@ -12,6 +12,8 @@ import UserProfile from './pages/UserProfile';
 import AllEmployees from './pages/AllEmployees';
 import OrgChart from './pages/OrgChart';
 import AdminSettings from './pages/AdminSettings';
+import ResolveMemberRequest from './pages/ResolveMemberRequest';
+import TransferEmployee from './pages/TransferEmployee';
 import Timesheets from './pages/Timesheets';
 import CompanyTimesheets from './pages/CompanyTimesheets';
 import PublicHolidays from './pages/PublicHolidays';
@@ -63,6 +65,8 @@ const MainContent = () => {
           <Route path="/company-timesheets" element={<CompanyTimesheets />} />
           <Route path="/holidays" element={<PublicHolidays />} />
           <Route path="/department/:id" element={<DepartmentView />} />
+          <Route path="/resolve-request/:id" element={<ResolveMemberRequest />} />
+          <Route path="/transfer-employees" element={<TransferEmployee />} />
           <Route path="/payroll" element={<PayrollManagement />} />
         </>
       )}
