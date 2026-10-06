@@ -63,6 +63,7 @@ export const updateAsset = async (req, res) => {
         }
         
         const q = `
+            UPDATE assets
             SET asset_tag = ?, name = ?, category = ?, status = ?, assigned_to = ?, assigned_date = ?, notes = ?
             WHERE id = ? AND company_id = ?
         `;

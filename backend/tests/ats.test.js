@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 
 // Create a valid token to bypass authMiddleware
 const adminToken = jwt.sign(
-  { id: 1, email: 'admin@company.com', role: 'admin', name: 'Admin', is_first_login: 0 },
+  { id: 1, email: 'admin@company.com', role: 'admin', name: 'Admin', is_first_login: 0, company_id: 1 },
   process.env.JWT_SECRET || 'supersecretkey'
 );
 
@@ -50,7 +50,8 @@ describe('ATS & Recruitment API Endpoints', () => {
 
     it('should fetch open jobs publicly', async () => {
         const res = await request(app)
-            .get('/api/careers/jobs');
+            .get('/api/careers/jobs')
+            .set('X-Subdomain', 'default');
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -63,6 +64,7 @@ describe('ATS & Recruitment API Endpoints', () => {
     it('should fail to apply for a job without a resume', async () => {
         const res = await request(app)
             .post('/api/careers/apply')
+            .set('X-Subdomain', 'default')
             .send({
                 job_id: createdJobId,
                 first_name: 'John',

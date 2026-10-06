@@ -3,12 +3,12 @@ import app from '../index.js';
 import jwt from 'jsonwebtoken';
 
 const adminToken = jwt.sign(
-  { id: 1, email: 'admin@company.com', role: 'admin', name: 'Admin', is_first_login: 0 },
+  { id: 1, email: 'admin@company.com', role: 'admin', name: 'Admin', is_first_login: 0, company_id: 1 },
   process.env.JWT_SECRET || 'supersecretkey'
 );
 
 const empToken = jwt.sign(
-  { id: 2, email: 'emp@company.com', role: 'employee', name: 'Employee', is_first_login: 0 },
+  { id: 2, email: 'emp@company.com', role: 'employee', name: 'Employee', is_first_login: 0, company_id: 1 },
   process.env.JWT_SECRET || 'supersecretkey'
 );
 
@@ -44,7 +44,7 @@ describe('Assets Management API Endpoints', () => {
             });
             
         expect(res.status).toBe(400);
-        expect(res.body.message).toBe("Asset tag must be unique.");
+        expect(res.body.message).toBe("Asset tag must be unique within your company.");
     });
 
     it('should allow admin to fetch all assets', async () => {
