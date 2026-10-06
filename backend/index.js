@@ -2,10 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import db from './db.js';
+import db from './database/db.js';
 import authRoute from './routes/shared/authRoute.js';
 import holidayRoute from './routes/shared/holidayRoute.js';
 import messageRoute from './routes/shared/messageRoute.js';
+import careersRoute from './routes/public/careersRoute.js';
+import performanceRoute from './routes/shared/performanceRoute.js';
+import expensesRoute from './routes/shared/expensesRoute.js';
 
 import employeeLeavesRoute from './routes/employee/leavesRoute.js';
 import employeeTimesheetRoute from './routes/employee/timesheetRoute.js';
@@ -19,6 +22,9 @@ import adminRequestsRoute from './routes/admin/requestsRoute.js';
 import adminDepartmentRoute from './routes/admin/departmentRoute.js';
 import adminDesignationRoute from './routes/admin/designationRoute.js';
 import adminPayrollRoute from './routes/admin/payrollRoute.js';
+import atsRoute from './routes/admin/atsRoute.js';
+import assetsRoute from './routes/admin/assetsRoute.js';
+import superAdminRoute from './routes/superAdminRoute.js';
 
 import managerLeavesRoute from './routes/manager/leavesRoute.js';
 import managerTeamRoute from './routes/manager/teamRoute.js';
@@ -59,6 +65,11 @@ startCronJobs();
 app.use('/api/auth', authRoute);
 app.use('/api/holidays', holidayRoute);
 app.use('/api/messages', messageRoute);
+app.use('/api/performance', performanceRoute);
+app.use('/api/expenses', expensesRoute);
+
+// Public Routes
+app.use('/api/careers', careersRoute);
 
 // Employee Routes
 app.use('/api/user/leaves', employeeLeavesRoute);
@@ -74,10 +85,15 @@ app.use('/api/requests/member', adminRequestsRoute);
 app.use('/api/departments', adminDepartmentRoute);
 app.use('/api/designations', adminDesignationRoute);
 app.use('/api/admin/payroll', adminPayrollRoute);
+app.use('/api/admin/ats', atsRoute);
+app.use('/api/assets', assetsRoute);
 
 // Manager Routes
 app.use('/api/manager/leaves', managerLeavesRoute);
 app.use('/api/manager/team', managerTeamRoute);
+
+// Super Admin Routes
+app.use('/api/superadmin', superAdminRoute);
 
 // Create uploads directory if it doesn't exist
 import fs from 'fs';

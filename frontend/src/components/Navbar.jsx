@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare, DollarSign } from 'lucide-react';
+import { User, Users, Moon, Sun, LogOut, Briefcase, Settings, Clock, Calendar, MessageSquare, DollarSign, Target, Box, Receipt } from 'lucide-react';
 import axios from 'axios';
 import './Navbar.scss';
 
@@ -74,6 +74,12 @@ const Navbar = () => {
               <Link to="/all-employees" className={`nav-link ${location.pathname === '/all-employees' ? 'active' : ''}`}>
                 <Users size={16} /> Employees
               </Link>
+              <Link to="/team-performance" className={`nav-link ${location.pathname === '/team-performance' ? 'active' : ''}`}>
+                <Target size={16} /> Performance
+              </Link>
+              <Link to="/manage-expenses" className={`nav-link ${location.pathname === '/manage-expenses' ? 'active' : ''}`}>
+                <Receipt size={16} /> Expenses
+              </Link>
             </>
           )}
 
@@ -92,6 +98,12 @@ const Navbar = () => {
               <Link to="/payroll" className={`nav-link ${location.pathname === '/payroll' ? 'active' : ''}`}>
                 <DollarSign size={16} /> Payroll
               </Link>
+              <Link to="/recruitment" className={`nav-link ${location.pathname === '/recruitment' ? 'active' : ''}`}>
+                <Briefcase size={16} /> Recruitment
+              </Link>
+              <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>
+                <Box size={16} /> Assets
+              </Link>
             </>
           )}
 
@@ -103,6 +115,12 @@ const Navbar = () => {
               </Link>
               <Link to="/my-payslips" className={`nav-link ${location.pathname === '/my-payslips' ? 'active' : ''}`}>
                 <DollarSign size={16} /> My Payslips
+              </Link>
+              <Link to="/my-performance" className={`nav-link ${location.pathname === '/my-performance' ? 'active' : ''}`}>
+                <Target size={16} /> My Performance
+              </Link>
+              <Link to="/my-expenses" className={`nav-link ${location.pathname === '/my-expenses' ? 'active' : ''}`}>
+                <Receipt size={16} /> My Expenses
               </Link>
             </>
           )}

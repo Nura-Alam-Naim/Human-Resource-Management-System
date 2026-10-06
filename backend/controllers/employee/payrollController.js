@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 export const getMyPayslips = async (req, res) => {
     try {
@@ -6,10 +6,10 @@ export const getMyPayslips = async (req, res) => {
         const q = `
             SELECT * 
             FROM payslips 
-            WHERE user_id = ?
+            WHERE user_id = ? AND company_id = ?
             ORDER BY year DESC, month DESC
         `;
-        const [rows] = await db.query(q, [userId]);
+        const [rows] = await db.query(q, [userId, req.user.company_id]);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching my payslips:", error);

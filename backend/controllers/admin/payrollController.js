@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 // Get all employees with their base salary
 export const getEmployeesSalary = async (req, res) => {
@@ -8,9 +8,9 @@ export const getEmployeesSalary = async (req, res) => {
             FROM users u
             LEFT JOIN departments d ON u.department_id = d.id
             LEFT JOIN designations des ON u.designation_id = des.id
-            WHERE u.role != 'admin'
+            WHERE u.role != 'superadmin' AND u.company_id = ?
         `;
-        const [rows] = await db.query(q);
+        const [rows] = await db.query(q, [req.user.company_id]);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching salaries:", error);
@@ -28,7 +28,7 @@ export const generatePayslip = async (req, res) => {
         }
 
         // 1. Get user's base salary
-        const [userRows] = await db.query('SELECT base_salary FROM users WHERE id = ?', [user_id]);
+        const [userRows] = await db.query('SELECT base_salary FROM users WHERE id = ? AND company_id = ?', [user_id, req.user.company_id]);
         if (userRows.length === 0) {
             return res.status(404).json({ message: "User not found." });
         }
@@ -79,13 +79,13 @@ export const generatePayslip = async (req, res) => {
 
         // Ensure we don't insert duplicate payslips (UNIQUE KEY catches this, but we can update or ignore)
         const q = `
-            INSERT INTO payslips (user_id, month, year, base_salary, days_worked, gross_pay, deductions, net_pay)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO payslips (user_id, month, year, base_salary, days_worked, gross_pay, deductions, net_pay, company_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
             base_salary = VALUES(base_salary), days_worked = VALUES(days_worked), gross_pay = VALUES(gross_pay), deductions = VALUES(deductions), net_pay = VALUES(net_pay)
         `;
         
-        await db.query(q, [user_id, month, year, base_salary, days_worked, gross_pay, deductions, net_pay]);
+        await db.query(q, [user_id, month, year, base_salary, days_worked, gross_pay, deductions, net_pay, req.user.company_id]);
 
         res.status(200).json({ message: "Payslip generated successfully!", payslip: { month, year, days_worked, net_pay } });
 
@@ -102,9 +102,10 @@ export const getAllPayslips = async (req, res) => {
             SELECT p.*, u.name as employee_name, u.email 
             FROM payslips p
             JOIN users u ON p.user_id = u.id
+            WHERE p.company_id = ?
             ORDER BY p.year DESC, p.month DESC, p.created_at DESC
         `;
-        const [rows] = await db.query(q);
+        const [rows] = await db.query(q, [req.user.company_id]);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching payslips:", error);

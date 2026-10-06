@@ -195,10 +195,17 @@ const Messages = () => {
   const isChatInputDisabled = () => {
     if (user.role !== 'admin') return false;
     
-    // Check chat history. If ANY admin has replied, but it's NOT the current admin, disable input.
-    const adminReplies = chatHistory.filter(m => m.sender_role === 'admin' && m.target_role !== 'admin');
-    if (adminReplies.length > 0) {
-      const firstReplierId = adminReplies[0].sender_id;
+    // Check chat history. Find admin replies in the last 48 hours.
+    const now = new Date();
+    const recentAdminReplies = chatHistory.filter(m => {
+      if (m.sender_role !== 'admin' || m.target_role === 'admin') return false;
+      const msgDate = new Date(m.created_at);
+      const diffHours = (now - msgDate) / (1000 * 60 * 60);
+      return diffHours < 48;
+    });
+
+    if (recentAdminReplies.length > 0) {
+      const firstReplierId = recentAdminReplies[0].sender_id;
       if (firstReplierId !== user.id) {
         return true;
       }

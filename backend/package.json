@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --forceExit"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --forceExit",
+    "seed": "node database/seed.js",
+    "seed:fresh": "node database/seed.js --fresh"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +25,8 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "mysql2": "^3.22.3",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "nodemailer": "^10.0.15"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

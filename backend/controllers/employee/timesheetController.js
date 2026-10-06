@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 export const clockIn = async (req, res) => {
   try {
@@ -7,8 +7,8 @@ export const clockIn = async (req, res) => {
     
     // Check if already clocked in today
     const [existing] = await db.query(
-      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ?',
-      [userId, today]
+      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ? AND company_id = ?',
+      [userId, today, req.user.company_id]
     );
 
     if (existing.length > 0) {
@@ -19,8 +19,8 @@ export const clockIn = async (req, res) => {
     }
 
     await db.query(
-      'INSERT INTO attendance (user_id, date, clock_in) VALUES (?, ?, NOW())',
-      [userId, today]
+      'INSERT INTO attendance (user_id, date, clock_in, company_id) VALUES (?, ?, NOW(), ?)',
+      [userId, today, req.user.company_id]
     );
 
     res.status(201).json({ message: "Successfully clocked in!" });
@@ -37,8 +37,8 @@ export const clockOut = async (req, res) => {
     
     // Check if clocked in today
     const [existing] = await db.query(
-      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ?',
-      [userId, today]
+      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ? AND company_id = ?',
+      [userId, today, req.user.company_id]
     );
 
     if (existing.length === 0) {
@@ -50,8 +50,8 @@ export const clockOut = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE attendance SET clock_out = NOW() WHERE id = ?',
-      [existing[0].id]
+      'UPDATE attendance SET clock_out = NOW() WHERE id = ? AND company_id = ?',
+      [existing[0].id, req.user.company_id]
     );
 
     res.json({ message: "Successfully clocked out!" });
@@ -68,8 +68,8 @@ export const resumeShift = async (req, res) => {
     
     // Check if clocked in today
     const [existing] = await db.query(
-      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ?',
-      [userId, today]
+      'SELECT id, clock_out FROM attendance WHERE user_id = ? AND date = ? AND company_id = ?',
+      [userId, today, req.user.company_id]
     );
 
     if (existing.length === 0) {
@@ -81,8 +81,8 @@ export const resumeShift = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE attendance SET clock_out = NULL WHERE id = ?',
-      [existing[0].id]
+      'UPDATE attendance SET clock_out = NULL WHERE id = ? AND company_id = ?',
+      [existing[0].id, req.user.company_id]
     );
 
     res.json({ message: "Shift resumed successfully!" });
@@ -105,14 +105,14 @@ export const getStatus = async (req, res) => {
     }
 
     // Check for public holidays
-    const [holidays] = await db.query('SELECT name FROM public_holidays WHERE date = ?', [today]);
+    const [holidays] = await db.query('SELECT name FROM public_holidays WHERE date = ? AND company_id = ?', [today, req.user.company_id]);
     if (holidays.length > 0) {
       return res.json({ status: 'holiday', holidayName: holidays[0].name });
     }
     
     const [existing] = await db.query(
-      'SELECT clock_in, clock_out FROM attendance WHERE user_id = ? AND date = ?',
-      [userId, today]
+      'SELECT clock_in, clock_out FROM attendance WHERE user_id = ? AND date = ? AND company_id = ?',
+      [userId, today, req.user.company_id]
     );
 
     if (existing.length === 0) {
@@ -140,8 +140,8 @@ export const getMyRecords = async (req, res) => {
     const limit = parseInt(req.query.limit) || 30;
     
     const [records] = await db.query(
-      'SELECT * FROM attendance WHERE user_id = ? ORDER BY date DESC LIMIT ?',
-      [userId, limit]
+      'SELECT * FROM attendance WHERE user_id = ? AND company_id = ? ORDER BY date DESC LIMIT ?',
+      [userId, req.user.company_id, limit]
     );
     
     res.json(records);
@@ -166,12 +166,12 @@ export const getAllRecords = async (req, res) => {
       LEFT JOIN attendance a ON u.id = a.user_id AND a.date = CURDATE()
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN designations des ON u.designation_id = des.id
-      WHERE u.role != 'admin'
+      WHERE u.role != 'superadmin' AND u.company_id = ?
       ORDER BY u.role, u.name
       LIMIT ? OFFSET ?
     `;
     
-    const [records] = await db.query(query, [limit, offset]);
+    const [records] = await db.query(query, [req.user.company_id, limit, offset]);
     res.json(records);
   } catch (error) {
     console.error("Get All Records Error:", error);

@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import db from '../db.js';
+import db from '../database/db.js';
 
 export const startCronJobs = () => {
 

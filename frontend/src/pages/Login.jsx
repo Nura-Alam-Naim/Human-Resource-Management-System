@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn } from 'lucide-react';
 import './Login.scss';
@@ -72,6 +73,9 @@ const Login = ({ onFirstLogin }) => {
           >
             {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
+          <div className="text-center mt-4 text-sm text-gray-600">
+            Don't have a workspace? <Link to="/register" className="text-primary hover:underline font-medium">Register</Link>
+          </div>
         </form>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 import { calculateWorkingDays } from '../../utils/leaveUtils.js';
 
 export const getAllRequests = async (req, res) => {
@@ -8,8 +8,8 @@ export const getAllRequests = async (req, res) => {
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
 
-        let whereClause = 'WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)';
-        const params = [req.user.id];
+        let whereClause = 'WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?) AND lr.company_id = ?';
+        const params = [req.user.id, req.user.company_id];
 
         if (search) {
             whereClause += ' AND (u.name LIKE ? OR lr.reason LIKE ? OR lr.status LIKE ?)';
@@ -57,8 +57,8 @@ export const updateStatus = async (req, res) => {
             SELECT lr.status, lr.user_id, lr.start_date, lr.end_date, u.role as requester_role 
             FROM leave_requests lr 
             JOIN users u ON lr.user_id = u.id 
-            WHERE lr.id = ?
-        `, [requestId]);
+            WHERE lr.id = ? AND lr.company_id = ?
+        `, [requestId, req.user.company_id]);
 
         if (oldReq.length === 0) return res.status(404).json({ message: "Request not found" });
         
@@ -72,8 +72,8 @@ export const updateStatus = async (req, res) => {
             return res.status(403).json({ message: "Managers can only approve employee requests." });
         }
 
-        const q = `UPDATE leave_requests SET status = ? WHERE id = ?`;
-        await db.query(q, [status, requestId]);
+        const q = `UPDATE leave_requests SET status = ? WHERE id = ? AND company_id = ?`;
+        await db.query(q, [status, requestId, req.user.company_id]);
 
         if (status === 'approved' && oldStatus !== 'approved') {
             await db.query(`UPDATE users SET total_leave_balance = total_leave_balance - ? WHERE id = ?`, [daysTaken, userId]);
@@ -82,8 +82,8 @@ export const updateStatus = async (req, res) => {
         }
 
         await db.query(
-            `INSERT INTO activity_logs (action, performed_by, target_user, details) VALUES (?, ?, ?, ?)`,
-            [`${status.charAt(0).toUpperCase() + status.slice(1)} Leave Request`, req.user.id, userId, `Status updated to ${status} for request ID ${requestId}`]
+            `INSERT INTO activity_logs (action, performed_by, target_user, details, company_id) VALUES (?, ?, ?, ?, ?)`,
+            [`${status.charAt(0).toUpperCase() + status.slice(1)} Leave Request`, req.user.id, userId, `Status updated to ${status} for request ID ${requestId}`, req.user.company_id]
         );
 
         res.json({ message: `Leave ${status} successfully!` });

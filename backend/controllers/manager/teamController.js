@@ -1,27 +1,27 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 export const getTeamAnalytics = async (req, res) => {
     try {
-        let deptFilter = 'WHERE department_id = (SELECT department_id FROM users WHERE id = ?)';
-        const params = [req.user.id];
+        let deptFilter = 'WHERE department_id = (SELECT department_id FROM users WHERE id = ?) AND company_id = ?';
+        const params = [req.user.id, req.user.company_id];
 
         const [[{ total_employees }]] = await db.query(`SELECT COUNT(*) as total_employees FROM users ${deptFilter}`, params);
         
-        let requestFilter = "WHERE lr.status = 'pending' AND u.department_id = (SELECT department_id FROM users WHERE id = ?)";
+        let requestFilter = "WHERE lr.status = 'pending' AND u.department_id = (SELECT department_id FROM users WHERE id = ?) AND lr.company_id = ?";
         const [[{ pending_requests }]] = await db.query(`
             SELECT COUNT(*) as pending_requests 
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id
             ${requestFilter}
-        `, params);
+        `, [req.user.id, req.user.company_id]);
 
-        let requestFilterApp = "WHERE lr.status = 'approved' AND u.department_id = (SELECT department_id FROM users WHERE id = ?)";
+        let requestFilterApp = "WHERE lr.status = 'approved' AND u.department_id = (SELECT department_id FROM users WHERE id = ?) AND lr.company_id = ?";
         const [[{ approved_requests }]] = await db.query(`
             SELECT COUNT(*) as approved_requests 
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id
             ${requestFilterApp}
-        `, params);
+        `, [req.user.id, req.user.company_id]);
         
         const [leave_distribution] = await db.query(`
             SELECT lt.type_name as name, COUNT(lr.id) as value
@@ -29,18 +29,20 @@ export const getTeamAnalytics = async (req, res) => {
             JOIN leave_types lt ON lr.type_id = lt.id
             JOIN users u ON lr.user_id = u.id
             WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)
+              AND lr.company_id = ?
               AND CURDATE() BETWEEN lr.start_date AND lr.end_date
             GROUP BY lt.id
-        `, params);
+        `, [req.user.id, req.user.company_id]);
 
         const [leave_status_distribution] = await db.query(`
             SELECT lr.status as name, COUNT(lr.id) as value
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id
             WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)
+              AND lr.company_id = ?
               AND CURDATE() BETWEEN lr.start_date AND lr.end_date
             GROUP BY lr.status
-        `, params);
+        `, [req.user.id, req.user.company_id]);
 
         const [worktime_stats] = await db.query(`
             SELECT DATE_FORMAT(a.date, '%a') as day, ROUND(AVG(TIMESTAMPDIFF(MINUTE, a.clock_in, a.clock_out) / 60), 1) as avg_hours
@@ -48,10 +50,11 @@ export const getTeamAnalytics = async (req, res) => {
             JOIN users u ON a.user_id = u.id
             WHERE a.date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
               AND a.clock_out IS NOT NULL
+              AND a.company_id = ?
               AND u.department_id = (SELECT department_id FROM users WHERE id = ?)
             GROUP BY a.date
             ORDER BY a.date ASC
-        `, params);
+        `, [req.user.company_id, req.user.id]);
 
         res.json({
             total_employees,
@@ -74,8 +77,8 @@ export const getTeamUsers = async (req, res) => {
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
 
-        let whereClause = 'WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?)';
-        const params = [req.user.id];
+        let whereClause = 'WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?) AND u.company_id = ?';
+        const params = [req.user.id, req.user.company_id];
 
         if (search) {
             whereClause += ' AND (u.name LIKE ? OR u.email LIKE ? OR u.role LIKE ?)';
@@ -125,9 +128,9 @@ export const getTeamUserProfile = async (req, res) => {
             FROM users u
             LEFT JOIN departments d ON u.department_id = d.id
             LEFT JOIN designations des ON u.designation_id = des.id
-            WHERE u.id = ? AND u.department_id = (SELECT department_id FROM users WHERE id = ?)
+            WHERE u.id = ? AND u.company_id = ? AND u.department_id = (SELECT department_id FROM users WHERE id = ?)
         `;
-        const [rows] = await db.query(q, [userId, req.user.id]);
+        const [rows] = await db.query(q, [userId, req.user.company_id, req.user.id]);
         if (rows.length === 0) {
             return res.status(404).json({ message: "User not found in your department." });
         }
@@ -136,21 +139,21 @@ export const getTeamUserProfile = async (req, res) => {
             SELECT lr.id, lr.start_date, lr.end_date, lr.reason, lr.status, lt.type_name 
             FROM leave_requests lr 
             JOIN leave_types lt ON lr.type_id = lt.id 
-            WHERE lr.user_id = ? 
+            WHERE lr.user_id = ? AND lr.company_id = ?
             ORDER BY lr.start_date DESC
         `;
-        const [historyRows] = await db.query(historyQuery, [userId]);
+        const [historyRows] = await db.query(historyQuery, [userId, req.user.company_id]);
 
         const worktimeQuery = `
             SELECT DATE_FORMAT(date, '%a') as day, ROUND(AVG(TIMESTAMPDIFF(MINUTE, clock_in, clock_out) / 60), 1) as avg_hours
             FROM attendance
-            WHERE user_id = ? 
+            WHERE user_id = ? AND company_id = ?
               AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
               AND clock_out IS NOT NULL
             GROUP BY date
             ORDER BY date ASC
         `;
-        const [worktimeRows] = await db.query(worktimeQuery, [userId]);
+        const [worktimeRows] = await db.query(worktimeQuery, [userId, req.user.company_id]);
 
         res.json({
             user: rows[0],
@@ -175,8 +178,8 @@ export const createMemberRequest = async (req, res) => {
 
         const departmentId = managerDept.department_id;
 
-        const q = "INSERT INTO member_requests (manager_id, department_id, requested_role, description) VALUES (?, ?, ?, ?)";
-        await db.query(q, [managerId, departmentId, requested_role, description]);
+        const q = "INSERT INTO member_requests (manager_id, department_id, requested_role, description, company_id) VALUES (?, ?, ?, ?, ?)";
+        await db.query(q, [managerId, departmentId, requested_role, description, req.user.company_id]);
 
         res.status(201).json({ message: "Member request submitted to Admin successfully!" });
     } catch (error) {
@@ -193,11 +196,11 @@ export const getMyMemberRequests = async (req, res) => {
             FROM member_requests mr
             JOIN users u ON mr.manager_id = u.id
             JOIN departments d ON mr.department_id = d.id
-            WHERE mr.manager_id = ?
+            WHERE mr.manager_id = ? AND mr.company_id = ?
             ORDER BY mr.created_at DESC
         `;
         
-        const [rows] = await db.query(q, [req.user.id]);
+        const [rows] = await db.query(q, [req.user.id, req.user.company_id]);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching member requests", error);
@@ -211,7 +214,7 @@ export const getTeamDesignations = async (req, res) => {
         if (!manager || !manager.department_id) {
             return res.json([]);
         }
-        const [designations] = await db.query('SELECT * FROM designations WHERE department_id = ? ORDER BY title ASC', [manager.department_id]);
+        const [designations] = await db.query('SELECT * FROM designations WHERE department_id = ? AND company_id = ? ORDER BY title ASC', [manager.department_id, req.user.company_id]);
         res.json(designations);
     } catch (error) {
         console.error("Error fetching designations", error);
@@ -259,8 +262,8 @@ export const createTransferRequest = async (req, res) => {
             return res.status(400).json({ message: "Employee is already in your department." });
         }
 
-        const q = "INSERT INTO transfer_requests (employee_id, target_department_id, requested_by) VALUES (?, ?, ?)";
-        await db.query(q, [employee_id, targetDepartmentId, managerId]);
+        const q = "INSERT INTO transfer_requests (employee_id, target_department_id, requested_by, company_id) VALUES (?, ?, ?, ?)";
+        await db.query(q, [employee_id, targetDepartmentId, managerId, req.user.company_id]);
 
         res.status(201).json({ message: "Transfer request submitted to Admin." });
     } catch (error) {
@@ -280,8 +283,8 @@ export const createTeamDesignation = async (req, res) => {
         }
 
         const [result] = await db.query(
-            'INSERT INTO designations (title, department_id) VALUES (?, ?)',
-            [title, manager.department_id]
+            'INSERT INTO designations (title, department_id, company_id) VALUES (?, ?, ?)',
+            [title, manager.department_id, req.user.company_id]
         );
         res.status(201).json({ message: 'Designation created successfully', id: result.insertId });
     } catch (error) {

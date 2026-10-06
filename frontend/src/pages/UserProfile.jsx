@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { User, Calendar, Shield, Clock, ArrowLeft, KeyRound } from 'lucide-react';
+import { User, Calendar, Shield, Clock, ArrowLeft, KeyRound, Box } from 'lucide-react';
 import './UserProfile.scss';
 
 const UserProfile = () => {
@@ -22,6 +22,10 @@ const UserProfile = () => {
   const [docLoading, setDocLoading] = useState(false);
   const [docFile, setDocFile] = useState(null);
   const [docType, setDocType] = useState('General');
+
+  // Assets
+  const [assets, setAssets] = useState([]);
+  const [assetsLoading, setAssetsLoading] = useState(false);
 
   // Profile Picture
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -50,9 +54,22 @@ const UserProfile = () => {
       }
     };
 
+    const fetchAssets = async () => {
+      try {
+        setAssetsLoading(true);
+        const res = await axios.get('/api/assets/my-assets');
+        setAssets(res.data);
+      } catch (err) {
+        console.error("Failed to fetch assets", err);
+      } finally {
+        setAssetsLoading(false);
+      }
+    };
+
     if (user) {
       fetchProfile();
       fetchDocuments();
+      fetchAssets();
     }
   }, [user]);
 
@@ -236,6 +253,34 @@ const UserProfile = () => {
               {isSubmitting ? 'Updating...' : 'Update Password'}
             </button>
           </form>
+        </div>
+
+        <div className="card documents-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="documents-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <Box size={24} className="text-blue-500" />
+            <h3>Assigned Equipment & Assets</h3>
+          </div>
+          
+          {assetsLoading ? (
+            <div className="spinner"></div>
+          ) : assets.length === 0 ? (
+            <p className="text-gray-500">You currently have no company assets assigned to you.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              {assets.map(asset => (
+                <div key={asset.id} className="border border-[var(--border-color)] rounded-lg p-4 bg-[var(--bg-secondary)] flex items-start gap-4">
+                  <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+                    <Box size={24} className="text-gray-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">{asset.name}</h4>
+                    <p className="text-sm text-gray-500 capitalize mb-1">{asset.category} • {asset.asset_tag}</p>
+                    <p className="text-xs text-gray-400">Assigned: {new Date(asset.assigned_date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="card documents-card" style={{ gridColumn: '1 / -1' }}>

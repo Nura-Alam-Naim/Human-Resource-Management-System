@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 import bcrypt from 'bcrypt';
 
 export const getUserProfile = async (req, res) => {
@@ -11,9 +11,9 @@ export const getUserProfile = async (req, res) => {
             FROM users u
             LEFT JOIN departments d ON u.department_id = d.id
             LEFT JOIN designations des ON u.designation_id = des.id
-            WHERE u.id = ?
+            WHERE u.id = ? AND u.company_id = ?
         `;
-        const [rows] = await db.query(q, [userId]);
+        const [rows] = await db.query(q, [userId, req.user.company_id]);
         if (rows.length === 0) {
             return res.status(404).json({ message: "User not found." });
         }
@@ -60,8 +60,8 @@ export const createUser = async (req, res) => {
         const defaultPassword = await bcrypt.hash('Welcome@123', 10);
         const leaveBalance = total_leave_balance || 20;
 
-        const q = "INSERT INTO users (name, email, password, role, total_leave_balance, is_first_login, department_id, designation_id) VALUES (?, ?, ?, ?, ?, TRUE, ?, ?)";
-        const [result] = await db.query(q, [name, email, defaultPassword, role, leaveBalance, department_id || null, designation_id || null]);
+        const q = "INSERT INTO users (name, email, password, role, total_leave_balance, is_first_login, department_id, designation_id, company_id) VALUES (?, ?, ?, ?, ?, TRUE, ?, ?, ?)";
+        const [result] = await db.query(q, [name, email, defaultPassword, role, leaveBalance, department_id || null, designation_id || null, req.user.company_id]);
         
         const empId = `EMP-${result.insertId.toString().padStart(3, '0')}`;
         await db.query("UPDATE users SET employee_id = ? WHERE id = ?", [empId, result.insertId]);
@@ -88,11 +88,11 @@ export const getAllUsers = async (req, res) => {
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
 
-        let whereClause = '';
-        const params = [];
+        let whereClause = 'WHERE u.company_id = ?';
+        const params = [req.user.company_id];
 
         if (search) {
-            whereClause = 'WHERE u.name LIKE ? OR u.email LIKE ? OR u.role LIKE ?';
+            whereClause += ' AND (u.name LIKE ? OR u.email LIKE ? OR u.role LIKE ?)';
             params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
 
@@ -134,7 +134,7 @@ export const updateUserDesignation = async (req, res) => {
         const userId = req.params.user_id;
         const { designation_id } = req.body;
         
-        await db.query('UPDATE users SET designation_id = ? WHERE id = ?', [designation_id || null, userId]);
+        await db.query('UPDATE users SET designation_id = ? WHERE id = ? AND company_id = ?', [designation_id || null, userId, req.user.company_id]);
         res.json({ message: "Designation updated successfully" });
     } catch (error) {
         console.error("Error updating user designation", error);
@@ -147,11 +147,11 @@ export const updateUserRole = async (req, res) => {
         const userId = req.params.user_id;
         const { role } = req.body;
         
-        if (!role || !['admin', 'manager', 'employee'].includes(role)) {
+        if (!role || !['admin', 'manager', 'employee', 'superadmin'].includes(role)) {
             return res.status(400).json({ message: "Invalid role specified." });
         }
 
-        await db.query('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+        await db.query('UPDATE users SET role = ? WHERE id = ? AND company_id = ?', [role, userId, req.user.company_id]);
         
         await db.query(
             "INSERT INTO activity_logs (action, performed_by, target_user, details) VALUES (?, ?, ?, ?)",
@@ -170,7 +170,7 @@ export const updateUserDepartment = async (req, res) => {
         const userId = req.params.user_id;
         const { department_id } = req.body;
         
-        await db.query('UPDATE users SET department_id = ? WHERE id = ?', [department_id, userId]);
+        await db.query('UPDATE users SET department_id = ? WHERE id = ? AND company_id = ?', [department_id, userId, req.user.company_id]);
         
         await db.query(
             "INSERT INTO activity_logs (action, performed_by, target_user, details) VALUES (?, ?, ?, ?)",

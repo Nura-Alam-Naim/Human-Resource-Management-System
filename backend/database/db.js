@@ -56,9 +56,9 @@ const initializeDB = async () => {
     `);
     console.log("Users table is ready.");
     
-    // Ensure the ENUM has 'admin' in case the table was created before the admin role was introduced
+    // Ensure the ENUM has 'admin' and 'superadmin' in case the table was created before the roles were introduced
     try {
-      await db.query("ALTER TABLE users MODIFY COLUMN role ENUM('employee', 'manager', 'admin') DEFAULT 'employee'");
+      await db.query("ALTER TABLE users MODIFY COLUMN role ENUM('employee', 'manager', 'admin', 'superadmin') DEFAULT 'employee'");
     } catch(e) { /* Ignore if it fails */ }
     
     await db.query(`
@@ -204,7 +204,7 @@ const initializeDB = async () => {
       await db.query(`UPDATE departments SET manager_id = 3 WHERE id = 2`); 
       
       // Assign everyone an Employee ID based on their database ID
-      await db.query(`UPDATE users SET employee_id = CONCAT('EMP-', LPAD(id, 3, '0'))`);
+      await db.query(`UPDATE users SET employee_id = CONCAT('EMP-', LPAD(id, GREATEST(3, CHAR_LENGTH(id)), '0'))`);
       
       // Assign roles
       await db.query(`UPDATE users SET department_id = 1, designation_id = 1 WHERE role = 'employee'`);
@@ -313,7 +313,7 @@ const initializeDB = async () => {
         ('Frank Wright', 'frank@example.com', ?, 'employee', 2, 1, 15)
       `, [mockPassword, mockPassword, mockPassword, mockPassword, mockPassword, mockPassword]);
       
-      await db.query(`UPDATE users SET employee_id = CONCAT('EMP-', LPAD(id, 3, '0')) WHERE employee_id IS NULL`);
+      await db.query(`UPDATE users SET employee_id = CONCAT('EMP-', LPAD(id, GREATEST(3, CHAR_LENGTH(id)), '0')) WHERE employee_id IS NULL`);
       
       // Get the mock user IDs
       const [mockUsers] = await db.query("SELECT id FROM users WHERE email LIKE '%@example.com'");
@@ -446,6 +446,208 @@ const initializeDB = async () => {
         );
       `);
       console.log("HRMS Phase 7 Migration Complete. 'internal_messages' created.");
+    }
+
+    // --- HRMS PHASE 8 MIGRATION (Recruitment & ATS) ---
+    const [jobsTable] = await db.query("SHOW TABLES LIKE 'job_postings'");
+    if (jobsTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 8 (Recruitment & ATS)...");
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS job_postings (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          department_id INT NOT NULL,
+          employment_type ENUM('full-time', 'part-time', 'contract', 'internship') DEFAULT 'full-time',
+          location VARCHAR(255),
+          description TEXT,
+          requirements TEXT,
+          status ENUM('open', 'closed', 'draft') DEFAULT 'open',
+          created_by INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS job_applications (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          job_id INT NOT NULL,
+          first_name VARCHAR(100) NOT NULL,
+          last_name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) NOT NULL,
+          phone VARCHAR(50),
+          resume_path VARCHAR(255) NOT NULL,
+          cover_letter TEXT,
+          status ENUM('new', 'reviewing', 'interviewing', 'offered', 'rejected') DEFAULT 'new',
+          applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (job_id) REFERENCES job_postings(id) ON DELETE CASCADE
+        );
+      `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS interviews (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          application_id INT NOT NULL,
+          interviewer_id INT,
+          scheduled_time DATETIME NOT NULL,
+          meeting_link VARCHAR(255),
+          status ENUM('scheduled', 'completed', 'cancelled') DEFAULT 'scheduled',
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE,
+          FOREIGN KEY (interviewer_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+      `);
+      console.log("HRMS Phase 8 Migration Complete. ATS tables created.");
+    }
+
+    // --- HRMS PHASE 9 MIGRATION (Performance & Appraisals) ---
+    const [performanceTable] = await db.query("SHOW TABLES LIKE 'performance_goals'");
+    if (performanceTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 9 (Performance & Appraisals)...");
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS performance_goals (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id INT NOT NULL,
+          manager_id INT NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          target_date DATE NOT NULL,
+          status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS appraisals (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id INT NOT NULL,
+          reviewer_id INT NOT NULL,
+          review_period VARCHAR(50) NOT NULL,
+          rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+          comments TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+      console.log("HRMS Phase 9 Migration Complete. Performance tables created.");
+    }
+
+    // --- HRMS PHASE 10 MIGRATION (Assets Management) ---
+    const [assetsTable] = await db.query("SHOW TABLES LIKE 'assets'");
+    if (assetsTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 10 (Assets Management)...");
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS assets (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          asset_tag VARCHAR(100) NOT NULL UNIQUE,
+          name VARCHAR(255) NOT NULL,
+          category ENUM('laptop', 'monitor', 'phone', 'software', 'other') DEFAULT 'other',
+          status ENUM('available', 'assigned', 'maintenance', 'retired') DEFAULT 'available',
+          assigned_to INT,
+          assigned_date DATE,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+        );
+      `);
+      console.log("HRMS Phase 10 Migration Complete. Assets table created.");
+    }
+
+    // --- HRMS PHASE 11 MIGRATION (Expense Claims) ---
+    const [expensesTable] = await db.query("SHOW TABLES LIKE 'expense_claims'");
+    if (expensesTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 11 (Expense Claims)...");
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS expense_claims (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id INT NOT NULL,
+          date DATE NOT NULL,
+          amount DECIMAL(10,2) NOT NULL,
+          category ENUM('travel', 'meals', 'supplies', 'equipment', 'other') DEFAULT 'other',
+          description TEXT,
+          receipt_path VARCHAR(255),
+          status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+          approved_by INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+      `);
+      console.log("HRMS Phase 11 Migration Complete. Expense Claims table created.");
+    }
+
+    // --- HRMS PHASE 12 MIGRATION (SaaS Transformation / Multi-Tenancy) ---
+    const [companiesTable] = await db.query("SHOW TABLES LIKE 'companies'");
+    if (companiesTable.length === 0) {
+      console.log("Upgrading database schema for HRMS Phase 12 (SaaS Transformation / Multi-Tenancy)...");
+      
+      // 1. Create companies table
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS companies (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          subdomain VARCHAR(100) UNIQUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      
+      // 2. Insert Default Company for existing data
+      await db.query(`
+        INSERT INTO companies (id, name, subdomain) VALUES (1, 'Default Company', 'default')
+      `);
+      
+      const tablesToUpdate = [
+        'users', 'departments', 'designations', 'leave_types', 'leave_requests', 
+        'activity_logs', 'transfer_requests', 'member_requests', 'attendance', 
+        'public_holidays', 'documents', 'payslips', 'internal_messages', 
+        'job_postings', 'job_applications', 'interviews', 'performance_goals', 
+        'appraisals', 'assets', 'expense_claims'
+      ];
+      
+      // 3. Add company_id to all tables
+      for (const table of tablesToUpdate) {
+        // Only add if not exists
+        const [cols] = await db.query(`SHOW COLUMNS FROM ${table} LIKE 'company_id'`);
+        if (cols.length === 0) {
+           await db.query(`ALTER TABLE ${table} ADD COLUMN company_id INT NOT NULL DEFAULT 1`);
+           await db.query(`ALTER TABLE ${table} ADD FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE`);
+        }
+      }
+      
+      // 4. Update unique constraints to be scoped by company_id
+      try {
+        // Users: email -> (company_id, email)
+        await db.query("ALTER TABLE users DROP INDEX email");
+        await db.query("ALTER TABLE users ADD UNIQUE KEY unique_company_email (company_id, email)");
+        
+        // Departments: name -> (company_id, name)
+        await db.query("ALTER TABLE departments DROP INDEX name");
+        await db.query("ALTER TABLE departments ADD UNIQUE KEY unique_company_dept (company_id, name)");
+        
+        // Leave Types: type_name -> (company_id, type_name)
+        await db.query("ALTER TABLE leave_types DROP INDEX type_name");
+        await db.query("ALTER TABLE leave_types ADD UNIQUE KEY unique_company_leave_type (company_id, type_name)");
+        
+        // Public Holidays: date -> (company_id, date)
+        await db.query("ALTER TABLE public_holidays DROP INDEX date");
+        await db.query("ALTER TABLE public_holidays ADD UNIQUE KEY unique_company_holiday (company_id, date)");
+        
+        // Assets: asset_tag -> (company_id, asset_tag)
+        await db.query("ALTER TABLE assets DROP INDEX asset_tag");
+        await db.query("ALTER TABLE assets ADD UNIQUE KEY unique_company_asset (company_id, asset_tag)");
+      } catch (err) {
+        console.error("Warning: Some index modifications might have failed if they were already applied.", err.message);
+      }
+      
+      // 5. Create Super Admin role
+      // We will allow users to have a 'superadmin' role, which might not be tied to a specific company or tied to company 1
+      try {
+        await db.query("ALTER TABLE users MODIFY COLUMN role ENUM('employee', 'manager', 'admin', 'superadmin') DEFAULT 'employee'");
+      } catch(e) {}
+      
+      console.log("HRMS Phase 12 Migration Complete. Multi-Tenancy enabled.");
     }
 
   } catch (error) {

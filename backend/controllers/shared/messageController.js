@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 // Get contacts the user is allowed to message
 export const getContacts = async (req, res) => {
@@ -16,8 +16,8 @@ export const getContacts = async (req, res) => {
                 LEFT JOIN designations des_u ON u.designation_id = des_u.id
                 JOIN departments d ON u.id = d.manager_id 
                 JOIN users emp ON emp.department_id = d.id 
-                WHERE emp.id = ?
-            `, [userId]);
+                WHERE emp.id = ? AND u.company_id = ?
+            `, [userId, req.user.company_id]);
             contacts = [...managerRows];
             contacts.push({ id: 'admin_pool', name: 'Admin Support', role: 'admin', profile_picture: null });
         } else if (role === 'manager') {
@@ -27,16 +27,16 @@ export const getContacts = async (req, res) => {
                 FROM users u 
                 LEFT JOIN departments d_u ON u.department_id = d_u.id
                 LEFT JOIN designations des_u ON u.designation_id = des_u.id
-                WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?) AND u.id != ?
-            `, [userId, userId]);
+                WHERE u.department_id = (SELECT department_id FROM users WHERE id = ?) AND u.id != ? AND u.company_id = ?
+            `, [userId, userId, req.user.company_id]);
             
             const [otherManagers] = await db.query(`
                 SELECT u.id, u.name, u.role, u.profile_picture, d_u.name as department_name, des_u.title as designation_title 
                 FROM users u
                 LEFT JOIN departments d_u ON u.department_id = d_u.id
                 LEFT JOIN designations des_u ON u.designation_id = des_u.id
-                WHERE u.role = 'manager' AND u.id != ?
-            `, [userId]);
+                WHERE u.role = 'manager' AND u.id != ? AND u.company_id = ?
+            `, [userId, req.user.company_id]);
 
             contacts = [...deptRows, ...otherManagers];
             contacts.push({ id: 'admin_pool', name: 'Admin Support', role: 'admin', profile_picture: null });
@@ -47,8 +47,8 @@ export const getContacts = async (req, res) => {
                 FROM users u
                 LEFT JOIN departments d_u ON u.department_id = d_u.id
                 LEFT JOIN designations des_u ON u.designation_id = des_u.id
-                WHERE u.id != ?
-            `, [userId]);
+                WHERE u.id != ? AND u.company_id = ?
+            `, [userId, req.user.company_id]);
             contacts = [...allUsers];
             // Also add Admin Support so admins can see the pool messages
             contacts.push({ id: 'admin_pool', name: 'Global Admin Inbox', role: 'admin', profile_picture: null });
@@ -84,10 +84,10 @@ export const getConversations = async (req, res) => {
             LEFT JOIN users receiver ON m.receiver_id = receiver.id
             LEFT JOIN departments r_dept ON receiver.department_id = r_dept.id
             LEFT JOIN designations r_des ON receiver.designation_id = r_des.id
-            WHERE m.sender_id = ? OR m.receiver_id = ? OR (? = 'admin' AND (m.target_role = 'admin' OR sender.role = 'admin' OR receiver.role = 'admin'))
+            WHERE (m.sender_id = ? OR m.receiver_id = ? OR (? = 'admin' AND (m.target_role = 'admin' OR sender.role = 'admin' OR receiver.role = 'admin'))) AND m.company_id = ?
             ORDER BY m.created_at DESC
         `;
-        const [rows] = await db.query(q, [userId, userId, role]);
+        const [rows] = await db.query(q, [userId, userId, role, req.user.company_id]);
         
         const conversations = {};
         
@@ -216,10 +216,10 @@ export const getChatHistory = async (req, res) => {
                     JOIN users u ON m.sender_id = u.id
                     LEFT JOIN departments d ON u.department_id = d.id
                     LEFT JOIN designations des ON u.designation_id = des.id
-                    WHERE m.target_role = 'admin' AND m.receiver_id IS NULL
+                    WHERE m.target_role = 'admin' AND m.receiver_id IS NULL AND m.company_id = ?
                     ORDER BY m.created_at ASC
                 `;
-                params = [];
+                params = [req.user.company_id];
             } else {
                 q = `
                     SELECT m.*, 
@@ -229,11 +229,11 @@ export const getChatHistory = async (req, res) => {
                     JOIN users sender ON m.sender_id = sender.id
                     LEFT JOIN departments d ON sender.department_id = d.id
                     LEFT JOIN designations des ON sender.designation_id = des.id
-                    WHERE (m.sender_id = ? AND m.target_role = 'admin') 
-                       OR (m.receiver_id = ? AND sender.role = 'admin')
+                    WHERE ((m.sender_id = ? AND m.target_role = 'admin') 
+                       OR (m.receiver_id = ? AND sender.role = 'admin')) AND m.company_id = ?
                     ORDER BY m.created_at ASC
                 `;
-                params = [userId, userId];
+                params = [userId, userId, req.user.company_id];
             }
         } else {
             if (role === 'admin') {
@@ -251,11 +251,11 @@ export const getChatHistory = async (req, res) => {
                         JOIN users sender ON m.sender_id = sender.id
                         LEFT JOIN departments d ON sender.department_id = d.id
                         LEFT JOIN designations des ON sender.designation_id = des.id
-                        WHERE (m.sender_id = ? AND m.receiver_id = ?)
-                           OR (m.sender_id = ? AND m.receiver_id = ?)
+                        WHERE ((m.sender_id = ? AND m.receiver_id = ?)
+                           OR (m.sender_id = ? AND m.receiver_id = ?)) AND m.company_id = ?
                         ORDER BY m.created_at ASC
                     `;
-                    params = [userId, otherId, otherId, userId];
+                    params = [userId, otherId, otherId, userId, req.user.company_id];
                 } else {
                     // Admin to Employee/Manager: Show ALL messages between this user and ANY admin (or pool)
                     q = `
@@ -267,12 +267,12 @@ export const getChatHistory = async (req, res) => {
                         LEFT JOIN users receiver ON m.receiver_id = receiver.id
                         LEFT JOIN departments d ON sender.department_id = d.id
                         LEFT JOIN designations des ON sender.designation_id = des.id
-                        WHERE (m.sender_id = ? AND receiver.role = 'admin')
+                        WHERE ((m.sender_id = ? AND receiver.role = 'admin')
                            OR (m.receiver_id = ? AND sender.role = 'admin')
-                           OR (m.sender_id = ? AND m.target_role = 'admin' AND m.receiver_id IS NULL)
+                           OR (m.sender_id = ? AND m.target_role = 'admin' AND m.receiver_id IS NULL)) AND m.company_id = ?
                         ORDER BY m.created_at ASC
                     `;
-                    params = [otherId, otherId, otherId];
+                    params = [otherId, otherId, otherId, req.user.company_id];
                 }
             } else {
                 q = `
@@ -283,11 +283,11 @@ export const getChatHistory = async (req, res) => {
                     JOIN users sender ON m.sender_id = sender.id
                     LEFT JOIN departments d ON sender.department_id = d.id
                     LEFT JOIN designations des ON sender.designation_id = des.id
-                    WHERE (m.sender_id = ? AND m.receiver_id = ?)
-                       OR (m.sender_id = ? AND m.receiver_id = ?)
+                    WHERE ((m.sender_id = ? AND m.receiver_id = ?)
+                       OR (m.sender_id = ? AND m.receiver_id = ?)) AND m.company_id = ?
                     ORDER BY m.created_at ASC
                 `;
-                params = [userId, otherId, otherId, userId];
+                params = [userId, otherId, otherId, userId, req.user.company_id];
             }
         }
         
@@ -319,12 +319,33 @@ export const sendMessage = async (req, res) => {
             return res.status(400).json({ message: "Message is required." });
         }
 
+        // Backend validation: Only the admin who replies first (in a 48h window) can continue the chat
+        if (req.user.role === 'admin' && receiver_id !== 'admin_pool') {
+            const [adminReplies] = await db.query(`
+                SELECT sender_id 
+                FROM internal_messages 
+                WHERE receiver_id = ? 
+                  AND sender_id IN (SELECT id FROM users WHERE role = 'admin')
+                  AND created_at >= DATE_SUB(NOW(), INTERVAL 48 HOUR)
+                  AND company_id = ?
+                ORDER BY created_at ASC 
+                LIMIT 1
+            `, [receiver_id, req.user.company_id]);
+
+            if (adminReplies.length > 0) {
+                const firstReplierId = adminReplies[0].sender_id;
+                if (firstReplierId !== senderId) {
+                    return res.status(403).json({ message: "This conversation has been claimed by another administrator." });
+                }
+            }
+        }
+
         if (receiver_id === 'admin_pool') {
-            const q = "INSERT INTO internal_messages (sender_id, receiver_id, target_role, message) VALUES (?, NULL, 'admin', ?)";
-            await db.query(q, [senderId, message]);
+            const q = "INSERT INTO internal_messages (sender_id, receiver_id, target_role, message, company_id) VALUES (?, NULL, 'admin', ?, ?)";
+            await db.query(q, [senderId, message, req.user.company_id]);
         } else {
-            const q = "INSERT INTO internal_messages (sender_id, receiver_id, message) VALUES (?, ?, ?)";
-            await db.query(q, [senderId, receiver_id, message]);
+            const q = "INSERT INTO internal_messages (sender_id, receiver_id, message, company_id) VALUES (?, ?, ?, ?)";
+            await db.query(q, [senderId, receiver_id, message, req.user.company_id]);
         }
 
         res.status(201).json({ message: "Message sent successfully!" });
@@ -342,22 +363,22 @@ export const markAsRead = async (req, res) => {
 
         if (otherId === 'admin_pool' && role === 'admin') {
             // Admin marking pool messages as read
-            await db.query("UPDATE internal_messages SET is_read = TRUE WHERE target_role = 'admin' AND receiver_id IS NULL");
+            await db.query("UPDATE internal_messages SET is_read = TRUE WHERE target_role = 'admin' AND receiver_id IS NULL AND company_id = ?", [req.user.company_id]);
         } else if (otherId === 'admin_pool') {
             // Employee marking admin replies as read
             await db.query(`
                 UPDATE internal_messages m
                 JOIN users sender ON m.sender_id = sender.id
                 SET m.is_read = TRUE 
-                WHERE m.receiver_id = ? AND sender.role = 'admin'
-            `, [userId]);
+                WHERE m.receiver_id = ? AND sender.role = 'admin' AND m.company_id = ?
+            `, [userId, req.user.company_id]);
         } else {
             // Normal 1-on-1 read receipt
             // Also mark any pool messages from this otherId as read if we are admin
             if (role === 'admin') {
-                await db.query("UPDATE internal_messages SET is_read = TRUE WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND target_role = 'admin' AND receiver_id IS NULL)", [otherId, userId, otherId]);
+                await db.query("UPDATE internal_messages SET is_read = TRUE WHERE ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND target_role = 'admin' AND receiver_id IS NULL)) AND company_id = ?", [otherId, userId, otherId, req.user.company_id]);
             } else {
-                await db.query("UPDATE internal_messages SET is_read = TRUE WHERE sender_id = ? AND receiver_id = ?", [otherId, userId]);
+                await db.query("UPDATE internal_messages SET is_read = TRUE WHERE sender_id = ? AND receiver_id = ? AND company_id = ?", [otherId, userId, req.user.company_id]);
             }
         }
         res.json({ message: "Marked as read." });
@@ -377,16 +398,16 @@ export const getUnreadCount = async (req, res) => {
             q = `
                 SELECT COUNT(*) as unread_count 
                 FROM internal_messages 
-                WHERE is_read = FALSE AND (receiver_id = ? OR (target_role = 'admin' AND sender_id != ?))
+                WHERE is_read = FALSE AND (receiver_id = ? OR (target_role = 'admin' AND sender_id != ?)) AND company_id = ?
             `;
-            params = [userId, userId];
+            params = [userId, userId, req.user.company_id];
         } else {
             q = `
                 SELECT COUNT(*) as unread_count 
                 FROM internal_messages 
-                WHERE is_read = FALSE AND receiver_id = ?
+                WHERE is_read = FALSE AND receiver_id = ? AND company_id = ?
             `;
-            params = [userId];
+            params = [userId, req.user.company_id];
         }
         
         const [[{ unread_count }]] = await db.query(q, params);

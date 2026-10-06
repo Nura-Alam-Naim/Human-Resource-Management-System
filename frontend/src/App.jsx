@@ -7,6 +7,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import SetPassword from './pages/SetPassword';
 import UserProfile from './pages/UserProfile';
 import AllEmployees from './pages/AllEmployees';
@@ -21,6 +22,13 @@ import DepartmentView from './pages/DepartmentView';
 import Messages from './pages/Messages';
 import PayrollManagement from './pages/PayrollManagement';
 import MyPayslips from './pages/MyPayslips';
+import Careers from './pages/Careers';
+import RecruitmentATS from './pages/RecruitmentATS';
+import MyPerformance from './pages/MyPerformance';
+import TeamPerformance from './pages/TeamPerformance';
+import AssetsManagement from './pages/AssetsManagement';
+import MyExpenses from './pages/MyExpenses';
+import ManageExpenses from './pages/ManageExpenses';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -57,7 +65,11 @@ const MainContent = () => {
       <Route path="/" element={<Dashboard />} />
       <Route path="/profile" element={<UserProfile />} />
       {(user.role === 'manager' || user.role === 'admin') && (
-        <Route path="/all-employees" element={<AllEmployees />} />
+        <>
+          <Route path="/all-employees" element={<AllEmployees />} />
+          <Route path="/team-performance" element={<TeamPerformance />} />
+          <Route path="/manage-expenses" element={<ManageExpenses />} />
+        </>
       )}
       {user.role === 'admin' && (
         <>
@@ -68,12 +80,16 @@ const MainContent = () => {
           <Route path="/resolve-request/:id" element={<ResolveMemberRequest />} />
           <Route path="/transfer-employees" element={<TransferEmployee />} />
           <Route path="/payroll" element={<PayrollManagement />} />
+          <Route path="/recruitment" element={<RecruitmentATS />} />
+          <Route path="/assets" element={<AssetsManagement />} />
         </>
       )}
       <Route path="/my-timesheets" element={user ? <Timesheets /> : <Navigate to="/login" />} />
       <Route path="/org-chart" element={user ? <OrgChart /> : <Navigate to="/login" />} />
       <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" />} />
       <Route path="/my-payslips" element={user ? <MyPayslips /> : <Navigate to="/login" />} />
+      <Route path="/my-performance" element={user ? <MyPerformance /> : <Navigate to="/login" />} />
+      <Route path="/my-expenses" element={user ? <MyExpenses /> : <Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -85,11 +101,17 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <div className="app-container">
-              <AppHeader />
-              <MainContent />
-              <Toaster position="top-right" />
-            </div>
+            <Routes>
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/*" element={
+                <div className="app-container">
+                  <AppHeader />
+                  <MainContent />
+                  <Toaster position="top-right" />
+                </div>
+              } />
+            </Routes>
           </Router>
         </AuthProvider>
       </ThemeProvider>

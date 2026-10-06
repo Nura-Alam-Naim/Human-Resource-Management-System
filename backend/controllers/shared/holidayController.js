@@ -1,9 +1,9 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 import axios from 'axios';
 
 export const getHolidays = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM public_holidays ORDER BY date ASC');
+    const [rows] = await db.query('SELECT * FROM public_holidays WHERE company_id = ? ORDER BY date ASC', [req.user.company_id]);
     res.json(rows);
   } catch (error) {
     console.error("Error fetching holidays:", error);
@@ -14,7 +14,7 @@ export const getHolidays = async (req, res) => {
 export const createHoliday = async (req, res) => {
   try {
     const { date, name } = req.body;
-    await db.query('INSERT INTO public_holidays (date, name) VALUES (?, ?)', [date, name]);
+    await db.query('INSERT INTO public_holidays (date, name, company_id) VALUES (?, ?, ?)', [date, name, req.user.company_id]);
     res.status(201).json({ message: "Holiday created successfully!" });
   } catch (error) {
     console.error("Error creating holiday:", error);
@@ -28,7 +28,7 @@ export const createHoliday = async (req, res) => {
 export const deleteHoliday = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query('DELETE FROM public_holidays WHERE id = ?', [id]);
+    await db.query('DELETE FROM public_holidays WHERE id = ? AND company_id = ?', [id, req.user.company_id]);
     res.json({ message: "Holiday deleted successfully!" });
   } catch (error) {
     console.error("Error deleting holiday:", error);
@@ -48,7 +48,7 @@ export const syncHolidays = async (req, res) => {
     let insertedCount = 0;
     for (const h of holidays) {
       try {
-        await db.query('INSERT IGNORE INTO public_holidays (date, name) VALUES (?, ?)', [h.date, h.name]);
+        await db.query('INSERT IGNORE INTO public_holidays (date, name, company_id) VALUES (?, ?, ?)', [h.date, h.name, req.user.company_id]);
         insertedCount++;
       } catch (err) {
         console.error("Error inserting holiday", h, err);

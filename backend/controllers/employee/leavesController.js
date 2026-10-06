@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 import { calculateWorkingDays } from '../../utils/leaveUtils.js';
 
 
@@ -6,11 +6,11 @@ export const profile = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const q = "SELECT id, name, email, role, total_leave_balance, created_at, profile_picture FROM users WHERE id = ?";
-        const [rows] = await db.query(q, [userId]);
+        const q = "SELECT id, name, email, role, total_leave_balance, created_at, profile_picture FROM users WHERE id = ? AND company_id = ?";
+        const [rows] = await db.query(q, [userId, req.user.company_id]);
 
-        const leaveStatsQuery = "SELECT SUM(DATEDIFF(end_date, start_date) + 1) AS total_leaves_taken FROM leave_requests WHERE user_id = ? AND status = 'approved'";
-        const [leaveStats] = await db.query(leaveStatsQuery, [userId]);
+        const leaveStatsQuery = "SELECT SUM(DATEDIFF(end_date, start_date) + 1) AS total_leaves_taken FROM leave_requests WHERE user_id = ? AND status = 'approved' AND company_id = ?";
+        const [leaveStats] = await db.query(leaveStatsQuery, [userId, req.user.company_id]);
 
         const userProfile = rows[0];
         userProfile.total_leaves_taken = leaveStats[0].total_leaves_taken || 0;
@@ -21,10 +21,11 @@ export const profile = async (req, res) => {
             WHERE user_id = ? 
               AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) 
               AND clock_out IS NOT NULL
+              AND company_id = ?
             GROUP BY date
             ORDER BY date ASC
         `;
-        const [worktime_stats] = await db.query(worktimeQuery, [userId]);
+        const [worktime_stats] = await db.query(worktimeQuery, [userId, req.user.company_id]);
         userProfile.worktime_stats = worktime_stats;
 
         res.json(userProfile);
@@ -43,8 +44,8 @@ export const getMyRequests = async (req, res) => {
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
 
-        let whereClause = 'WHERE lr.user_id = ?';
-        const params = [userId];
+        let whereClause = 'WHERE lr.user_id = ? AND lr.company_id = ?';
+        const params = [userId, req.user.company_id];
         
         if (search) {
             whereClause += ' AND (lr.reason LIKE ? OR lt.type_name LIKE ? OR lr.status LIKE ?)';
@@ -86,7 +87,7 @@ export const applyForLeave = async (req, res) => {
         const { type_id, start_date, end_date, reason } = req.body;
         const userId = req.user.id;
         // Fix: Added missing 'await'
-        const [remainingDays] = await db.query("SELECT total_leave_balance FROM users WHERE id = ?", [userId]);
+        const [remainingDays] = await db.query("SELECT total_leave_balance FROM users WHERE id = ? AND company_id = ?", [userId, req.user.company_id]);
 
         const days_taken = await calculateWorkingDays(start_date, end_date);
 
@@ -98,8 +99,8 @@ export const applyForLeave = async (req, res) => {
             return res.status(400).json({ message: "Insufficient leave balance. You are requesting " + days_taken + " working days." });
         }
 
-        const q = "INSERT INTO leave_requests (user_id, type_id, start_date, end_date, reason, status) VALUES (?, ?, ?, ?, ?, 'pending')";
-        const values = [userId, type_id, start_date, end_date, reason];
+        const q = "INSERT INTO leave_requests (user_id, type_id, start_date, end_date, reason, status, company_id) VALUES (?, ?, ?, ?, ?, 'pending', ?)";
+        const values = [userId, type_id, start_date, end_date, reason, req.user.company_id];
 
         const [result] = await db.query(q, values);
 
@@ -118,8 +119,8 @@ export const editLeaveRequest = async (req, res) => {
         const { type_id, start_date, end_date, reason } = req.body;
 
         // Ensure we only update if it is still pending AND belongs to the logged-in user
-        const q = "UPDATE leave_requests SET type_id = ?, start_date = ?, end_date = ?, reason = ? WHERE id = ? AND status = 'pending' AND user_id = ?";
-        const [result] = await db.query(q, [type_id, start_date, end_date, reason, requestId, userId]);
+        const q = "UPDATE leave_requests SET type_id = ?, start_date = ?, end_date = ?, reason = ? WHERE id = ? AND status = 'pending' AND user_id = ? AND company_id = ?";
+        const [result] = await db.query(q, [type_id, start_date, end_date, reason, requestId, userId, req.user.company_id]);
 
         if (result.affectedRows === 0) {
             return res.status(400).json({ message: "Cannot edit. Request is either not pending, does not exist, or does not belong to you." });
@@ -139,7 +140,7 @@ export const cancelLeaveRequest = async (req, res) => {
         const userId = req.user.id;
 
         // Fetch old status to know if we need to refund
-        const [oldReq] = await db.query("SELECT status, start_date, end_date FROM leave_requests WHERE id = ? AND user_id = ?", [requestId, userId]);
+        const [oldReq] = await db.query("SELECT status, start_date, end_date FROM leave_requests WHERE id = ? AND user_id = ? AND company_id = ?", [requestId, userId, req.user.company_id]);
         if (oldReq.length === 0) {
             return res.status(404).json({ message: "Request not found or does not belong to you." });
         }
@@ -150,13 +151,13 @@ export const cancelLeaveRequest = async (req, res) => {
         }
 
         // Update to cancelled
-        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND user_id = ?";
-        await db.query(q, [requestId, userId]);
+        const q = "UPDATE leave_requests SET status = 'cancelled' WHERE id = ? AND user_id = ? AND company_id = ?";
+        await db.query(q, [requestId, userId, req.user.company_id]);
 
         // Refund if it was approved
         if (oldStatus === 'approved') {
             const daysTaken = await calculateWorkingDays(oldReq[0].start_date, oldReq[0].end_date);
-            await db.query("UPDATE users SET total_leave_balance = total_leave_balance + ? WHERE id = ?", [daysTaken, userId]);
+            await db.query("UPDATE users SET total_leave_balance = total_leave_balance + ? WHERE id = ? AND company_id = ?", [daysTaken, userId, req.user.company_id]);
         }
 
         res.json({ message: "Leave request cancelled successfully!" });

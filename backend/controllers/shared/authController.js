@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -8,21 +8,79 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Generate Token helper
 const generateToken = (user) => {
     return jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.name, is_first_login: user.is_first_login },
+        { 
+            id: user.id, 
+            email: user.email, 
+            role: user.role, 
+            name: user.name, 
+            is_first_login: user.is_first_login,
+            company_id: user.company_id
+        },
         JWT_SECRET,
         { expiresIn: '1d' }
     );
 };
 
+export const register = async (req, res) => {
+    try {
+        const { companyName, subdomain, adminName, email, password } = req.body;
+
+        if (!companyName || !subdomain || !adminName || !email || !password) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
+        // Check if subdomain exists
+        const [existingCompany] = await db.query('SELECT id FROM companies WHERE subdomain = ?', [subdomain]);
+        if (existingCompany.length > 0) {
+            return res.status(400).json({ message: "Workspace URL (subdomain) is already taken." });
+        }
+
+        // Check if email exists
+        const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: "Email is already registered." });
+        }
+
+        // Create company
+        const [companyResult] = await db.query(
+            'INSERT INTO companies (name, subdomain) VALUES (?, ?)',
+            [companyName, subdomain]
+        );
+        const companyId = companyResult.insertId;
+
+        // Create admin user
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await db.query(
+            'INSERT INTO users (name, email, password, role, is_first_login, company_id) VALUES (?, ?, ?, ?, FALSE, ?)',
+            [adminName, email, hashedPassword, 'admin', companyId]
+        );
+
+        res.status(201).json({ message: "Registration successful!", subdomain });
+    } catch (error) {
+        console.error("Registration error", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, subdomain } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ message: "Email and password are required." });
         }
 
-        const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        let query = 'SELECT u.* FROM users u';
+        let params = [email];
+        
+        if (subdomain) {
+            query += ' JOIN companies c ON u.company_id = c.id WHERE u.email = ? AND c.subdomain = ?';
+            params.push(subdomain);
+        } else {
+            query += ' WHERE u.email = ?';
+        }
+
+        const [rows] = await db.query(query, params);
         if (rows.length === 0) {
             return res.status(401).json({ message: "Invalid email or password." });
         }
@@ -52,7 +110,8 @@ export const login = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 is_first_login: user.is_first_login,
-                profile_picture: user.profile_picture
+                profile_picture: user.profile_picture,
+                company_id: user.company_id
             }
         });
     } catch (error) {
@@ -128,13 +187,22 @@ export const changePassword = async (req, res) => {
 export const getMe = async (req, res) => {
     try {
         const userId = req.user.id;
-        const [rows] = await db.query('SELECT id, name, email, role, is_first_login, total_leave_balance, profile_picture FROM users WHERE id = ?', [userId]);
+        const [rows] = await db.query('SELECT id, name, email, role, is_first_login, total_leave_balance, profile_picture, company_id FROM users WHERE id = ?', [userId]);
 
         if (rows.length === 0) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        res.json({ user: rows[0] });
+        const user = rows[0];
+        
+        // Also get company details
+        const [companyRows] = await db.query('SELECT name as company_name, subdomain FROM companies WHERE id = ?', [user.company_id]);
+        if (companyRows.length > 0) {
+            user.company_name = companyRows[0].company_name;
+            user.subdomain = companyRows[0].subdomain;
+        }
+
+        res.json({ user });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }

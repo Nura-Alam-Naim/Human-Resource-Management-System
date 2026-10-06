@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db from '../../database/db.js';
 
 export const getAllDepartments = async (req, res) => {
   try {
@@ -8,8 +8,9 @@ export const getAllDepartments = async (req, res) => {
       (SELECT COUNT(*) FROM member_requests mr WHERE mr.department_id = d.id AND mr.status = 'pending') as pending_member_requests
       FROM departments d
       LEFT JOIN users u ON d.manager_id = u.id
+      WHERE d.company_id = ?
       ORDER BY d.name ASC
-    `);
+    `, [req.user.company_id]);
     res.json(departments);
   } catch (error) {
     console.error('Error fetching departments:', error);
@@ -23,13 +24,13 @@ export const createDepartment = async (req, res) => {
 
   try {
     const [result] = await db.query(
-      'INSERT INTO departments (name, manager_id) VALUES (?, ?)',
-      [name, manager_id || null]
+      'INSERT INTO departments (name, manager_id, company_id) VALUES (?, ?, ?)',
+      [name, manager_id || null, req.user.company_id]
     );
 
     if (manager_id) {
       // Automatically promote to manager if they are currently an employee
-      await db.query('UPDATE users SET role = "manager" WHERE id = ? AND role = "employee"', [manager_id]);
+      await db.query('UPDATE users SET role = "manager" WHERE id = ? AND role = "employee" AND company_id = ?', [manager_id, req.user.company_id]);
     }
 
     res.status(201).json({ message: 'Department created successfully', departmentId: result.insertId });
@@ -48,13 +49,13 @@ export const updateDepartment = async (req, res) => {
 
   try {
     await db.query(
-      'UPDATE departments SET name = ?, manager_id = ? WHERE id = ?',
-      [name, manager_id || null, id]
+      'UPDATE departments SET name = ?, manager_id = ? WHERE id = ? AND company_id = ?',
+      [name, manager_id || null, id, req.user.company_id]
     );
 
     if (manager_id) {
       // Automatically promote to manager if they are currently an employee
-      await db.query('UPDATE users SET role = "manager" WHERE id = ? AND role = "employee"', [manager_id]);
+      await db.query('UPDATE users SET role = "manager" WHERE id = ? AND role = "employee" AND company_id = ?', [manager_id, req.user.company_id]);
     }
 
     res.json({ message: 'Department updated successfully' });
@@ -71,8 +72,8 @@ export const getDepartmentDetails = async (req, res) => {
       SELECT d.*, u.name as manager_name, u.email as manager_email 
       FROM departments d
       LEFT JOIN users u ON d.manager_id = u.id
-      WHERE d.id = ?
-    `, [id]);
+      WHERE d.id = ? AND d.company_id = ?
+    `, [id, req.user.company_id]);
 
     if (!department) return res.status(404).json({ error: 'Department not found' });
 
@@ -80,25 +81,25 @@ export const getDepartmentDetails = async (req, res) => {
       SELECT u.id, u.name, u.email, u.role, des.title as designation_title
       FROM users u
       LEFT JOIN designations des ON u.designation_id = des.id
-      WHERE u.department_id = ?
-    `, [id]);
+      WHERE u.department_id = ? AND u.company_id = ?
+    `, [id, req.user.company_id]);
 
     const [transferRequests] = await db.query(`
       SELECT tr.id, tr.status, tr.created_at, u1.name as employee_name, u2.name as requester_name
       FROM transfer_requests tr
       JOIN users u1 ON tr.employee_id = u1.id
       JOIN users u2 ON tr.requested_by = u2.id
-      WHERE tr.target_department_id = ? AND tr.status = 'pending'
+      WHERE tr.target_department_id = ? AND tr.status = 'pending' AND tr.company_id = ?
       ORDER BY tr.created_at DESC
-    `, [id]);
+    `, [id, req.user.company_id]);
 
     const [memberRequests] = await db.query(`
       SELECT mr.id, mr.requested_role, mr.description, mr.status, mr.created_at, u.name as manager_name
       FROM member_requests mr
       JOIN users u ON mr.manager_id = u.id
-      WHERE mr.department_id = ? AND mr.status = 'pending'
+      WHERE mr.department_id = ? AND mr.status = 'pending' AND mr.company_id = ?
       ORDER BY mr.created_at DESC
-    `, [id]);
+    `, [id, req.user.company_id]);
 
     res.json({ department, employees, transferRequests, memberRequests });
   } catch (error) {
@@ -116,13 +117,13 @@ export const updateTransferStatus = async (req, res) => {
   }
 
   try {
-    const [[request]] = await db.query('SELECT * FROM transfer_requests WHERE id = ?', [id]);
+    const [[request]] = await db.query('SELECT * FROM transfer_requests WHERE id = ? AND company_id = ?', [id, req.user.company_id]);
     if (!request) return res.status(404).json({ error: 'Request not found' });
 
-    await db.query('UPDATE transfer_requests SET status = ? WHERE id = ?', [status, id]);
+    await db.query('UPDATE transfer_requests SET status = ? WHERE id = ? AND company_id = ?', [status, id, req.user.company_id]);
 
     if (status === 'approved') {
-      await db.query('UPDATE users SET department_id = ? WHERE id = ?', [request.target_department_id, request.employee_id]);
+      await db.query('UPDATE users SET department_id = ? WHERE id = ? AND company_id = ?', [request.target_department_id, request.employee_id, req.user.company_id]);
     }
 
     res.json({ message: 'Transfer request updated successfully' });

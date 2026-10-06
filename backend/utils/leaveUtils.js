@@ -1,4 +1,4 @@
-import db from '../db.js';
+import db from '../database/db.js';
 
 export const calculateWorkingDays = async (startDateStr, endDateStr) => {
   const start = new Date(startDateStr);

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '../index.js';
-import db from '../db.js';
+import db from '../database/db.js';
 import { calculateWorkingDays } from '../utils/leaveUtils.js';
 
 afterAll(async () => {
